@@ -14,3 +14,6 @@ whitenoise>=6,<7
 pytest>=8,<10
 pytest-django>=4.8,<5
 factory-boy>=3.3,<4
+weasyprint>=62,<63
+pydyf>=0.10.0,<0.12  # pin: pydyf 0.12 removed transform(), breaking weasyprint 62
+cffi>=0.6,<2         # pin: cffi 2.0 breaks weasyprint 62 native bindings

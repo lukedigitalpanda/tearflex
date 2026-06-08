@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en-gb">
+<head>
+  <meta charset="utf-8" />
+  <style>
+    @page { size: A4; margin: 2cm; }
+    body { font-family: sans-serif; color: #0F172A; font-size: 12px; }
+    h1 { color: #0E7C7B; font-size: 22px; margin-bottom: 0; }
+    .practice { color: #475569; margin-bottom: 24px; }
+    .section { margin-bottom: 20px; }
+    .label { color: #475569; font-size: 10px; text-transform: uppercase; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #CBD5E1; }
+    .severity { font-weight: 600; }
+    .normal { color: #16a34a; } .mild { color: #d97706; }
+    .moderate { color: #ea580c; } .severe { color: #dc2626; }
+  </style>
+</head>
+<body>
+  <h1>Tear Film Assessment Report</h1>
+  <div class="practice">{{ practice.name }} — {{ practice.city }}</div>
+
+  <div class="section">
+    <div class="label">Patient</div>
+    <div>{{ patient.full_name }} · DOB {{ patient.date_of_birth }}</div>
+    <div class="label" style="margin-top:8px;">Assessment</div>
+    <div>{{ assessment.get_eye_display }} eye · {{ assessment.assessed_at|date:"d/m/Y H:i" }}</div>
+  </div>
+
+  <div class="section">
+    <div class="label">Results</div>
+    <table>
+      <thead>
+        <tr><th>Test</th><th>NIBUT (first)</th><th>NIBUT (mean)</th><th>Severity</th></tr>
+      </thead>
+      <tbody>
+        {% for capture in captures %}
+        <tr>
+          <td>{{ capture.get_test_type_display }}</td>
+          <td>{{ capture.result.nibut_first_breakup_seconds|default:"—" }}</td>
+          <td>{{ capture.result.nibut_mean_breakup_seconds|default:"—" }}</td>
+          <td class="severity {{ capture.result.dry_eye_severity }}">
+            {{ capture.result.get_dry_eye_severity_display|default:"Not assessed" }}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4">No captures recorded.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>
