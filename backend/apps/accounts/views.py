@@ -1,7 +1,8 @@
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .serializers import MeSerializer, PracticeSerializer, ClinicianSerializer
+from .serializers import MeSerializer, PracticeSerializer, ClinicianSerializer, ClinicianInviteSerializer
+from .permissions import IsPracticeAdmin
 
 
 class MeView(APIView):
@@ -40,3 +41,28 @@ class PracticeClinicianListView(generics.ListAPIView):
 
     def get_queryset(self):
         return self.request.user.clinician.practice.clinicians.select_related('user').all()
+
+
+class ClinicianInviteView(generics.GenericAPIView):
+    """Invite a new clinician to the current practice (admin only)."""
+    permission_classes = [permissions.IsAuthenticated, IsPracticeAdmin]
+    serializer_class = ClinicianInviteSerializer
+
+    def post(self, request):
+        clinician = request.user.clinician
+        serializer = self.get_serializer(
+            data=request.data,
+            context={'practice': clinician.practice, 'invited_by': clinician},
+        )
+        serializer.is_valid(raise_exception=True)
+        invite = serializer.save()
+        return Response(
+            {
+                'id': invite.id,
+                'email': invite.email,
+                'role': invite.role,
+                'token': invite.token,
+                'invite_url': f"/register?token={invite.token}",
+            },
+            status=status.HTTP_201_CREATED,
+        )
