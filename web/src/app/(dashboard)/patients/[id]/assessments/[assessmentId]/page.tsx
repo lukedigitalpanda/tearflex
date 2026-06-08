@@ -5,6 +5,7 @@ import { ResultsDisplay } from '@/components/assessments/ResultsDisplay'
 import { GenerateReportButton } from '@/components/reports/GenerateReportButton'
 import { LoadingState } from '@/components/common/LoadingState'
 import { EmptyState } from '@/components/common/EmptyState'
+import type { TestCapture } from '@shared/types/assessment'
 
 export default function AssessmentDetailPage({ params }: { params: { assessmentId: string } }) {
   const { data: assessment, isLoading } = useAssessment(Number(params.assessmentId))
@@ -28,7 +29,7 @@ export default function AssessmentDetailPage({ params }: { params: { assessmentI
 
       {assessment.captures.length === 0
         ? <EmptyState title="No captures in this assessment" />
-        : assessment.captures.map((c) => (
+        : assessment.captures.map((c: TestCapture) => (
             <div key={c.id} className="space-y-2">
               <h2 className="text-sm font-semibold text-slate-600">{c.test_type.toUpperCase()}</h2>
               {c.result
