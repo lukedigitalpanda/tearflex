@@ -1,0 +1,11 @@
+.git/
+**/node_modules/
+backend/venv/
+**/.next/
+mobile/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+*.env.prod
+backend/.env*
+web/.env*
