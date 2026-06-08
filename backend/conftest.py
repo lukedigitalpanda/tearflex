@@ -42,7 +42,7 @@ class PatientFactory(factory.django.DjangoModelFactory):
         model = Patient
 
     practice = factory.SubFactory(PracticeFactory)
-    first_name = 'Jane'
+    first_name = factory.Sequence(lambda n: f'Patient{n}')
     last_name = factory.Sequence(lambda n: f'Doe{n}')
     date_of_birth = '1980-01-01'
 
@@ -52,7 +52,7 @@ class AssessmentFactory(factory.django.DjangoModelFactory):
         model = Assessment
 
     patient = factory.SubFactory(PatientFactory)
-    clinician = factory.SubFactory(ClinicianFactory)
+    clinician = factory.SubFactory(ClinicianFactory, practice=factory.SelfAttribute('..patient.practice'))
     eye = 'right'
 
 
