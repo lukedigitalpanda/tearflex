@@ -56,7 +56,11 @@ def patient_trend(request, pk):
         'analysed_at', 'nibut_first_breakup_seconds', 'nibut_mean_breakup_seconds', 'dry_eye_severity'
     )
 
-    return Response({
-        'patient_id': patient.id,
-        'data_points': list(results),
-    })
+    data = [
+        {
+            'date': r['analysed_at'].strftime('%d/%m/%Y') if r['analysed_at'] else '',
+            'nibut': r['nibut_first_breakup_seconds'],
+        }
+        for r in results
+    ]
+    return Response(data)
