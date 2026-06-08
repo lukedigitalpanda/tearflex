@@ -1,0 +1,27 @@
+# TearFlex Web App
+
+Next.js 14 (App Router) web application for TearFlex.
+
+## Setup
+
+```bash
+npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir
+npx shadcn@latest init
+npm install @tanstack/react-query zustand react-hook-form @hookform/resolvers zod recharts
+```
+
+## Environment
+
+Copy `.env.example` to `.env.local`:
+
+```
+NEXT_PUBLIC_API_URL=http://localhost:8000/api
+```
+
+## Development
+
+```bash
+npm run dev
+```
+
+Open http://localhost:3000
