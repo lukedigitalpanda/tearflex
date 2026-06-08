@@ -1,5 +1,5 @@
 from django.http import FileResponse
-from rest_framework import generics, status
+from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 
 from apps.assessments.models import Assessment
@@ -9,9 +9,13 @@ from .serializers import GenerateReportSerializer, ReportSerializer
 
 
 class PracticeScopedReportMixin:
+    permission_classes = [permissions.IsAuthenticated]
+
     def get_queryset(self):
         practice = self.request.user.clinician.practice
-        return Report.objects.filter(assessment__patient__practice=practice)
+        return Report.objects.select_related('assessment', 'generated_by').filter(
+            assessment__patient__practice=practice
+        )
 
 
 class ReportListView(PracticeScopedReportMixin, generics.ListAPIView):
