@@ -1,38 +1,56 @@
-# Web App — Sprint 1 Design
+# Complete Web Client Design
 
 **Date:** 2026-06-08
 **Status:** Approved for planning
-**Scope:** The TearFlex Next.js web app, Sprint 1 (Foundation): auth, patient
-management, and read-only assessment/results views, wired to the existing
-Django backend.
+**Scope:** The complete TearFlex Next.js web client — auth, patient management,
+assessment/results views, PDF reports, and practice/clinician administration —
+wired to the existing Django backend, plus the minimal backend additions those
+features require (`reports` app, clinician-invite endpoint).
 
 ---
 
 ## 1. Goal & Scope
 
-Build the first verifiable, demoable slice of the TearFlex web client. A
-clinician can log in, browse and search their practice's patients, view a
-patient profile with assessment history and a NIBUT trend chart, drill into an
-assessment to see captures and colour-coded results, create a new patient, and
-edit practice-level clinical thresholds.
+Build the full TearFlex web client: the practice-facing management, reporting,
+and admin surface. A clinician can log in, browse and search their practice's
+patients, view a patient profile with assessment history and a NIBUT trend
+chart, drill into an assessment to see captures and colour-coded results,
+generate and download a PDF report, create/edit patients, administer the
+practice's clinicians (including invites), and edit practice-level clinical
+thresholds.
 
-### In scope (Sprint 1)
+This sub-project spans some backend work, because two web features depend on
+backend endpoints that do not yet exist (§4a). Those additions are scoped here so
+the web pages are actually functional.
+
+### In scope
+**Web client**
 - Next.js 14 (App Router) + TypeScript + Tailwind + shadcn/ui project scaffold.
-- Auth: login, logout, session persistence, route protection.
-- httpOnly-cookie auth via a Next.js BFF (see §4).
-- Patient list (searchable, paginated), patient profile, new-patient form.
+- Auth: login, logout, session persistence, route protection (httpOnly-cookie
+  BFF — see §4).
+- Patient list (searchable, paginated), patient profile, create/edit patient.
 - NIBUT trend chart (Recharts) on the patient profile.
-- Assessment detail (read-only): captures + `TestResult` display.
-- Practice settings page (view/edit practice details + NIBUT thresholds).
+- Assessment detail: captures + full `TestResult` display (NIBUT headline plus
+  fluorescein and lipid fields, each rendering gracefully when null).
+- Reports: generate a PDF for an assessment, preview, and download.
+- Practice settings: view/edit practice details + NIBUT thresholds.
+- Clinician admin: list clinicians, invite a new clinician.
 - Completion of shared types (`shared/types/user.ts`, `api.ts`,
   `shared/constants/testTypes.ts`) to match the real serializers.
 - Design system (teal palette, Inter, status colours) in Tailwind + shadcn theme.
 
-### Explicitly out of scope (later sprints / sessions)
-- Capture/upload flow (mobile-only in this product).
-- PDF report generation and download (backend `reports` app is still stubbed).
-- Clinician invite / registration management.
-- Fluorescein and lipid result modules (backend produces NIBUT only for MVP).
+**Backend additions required by the above (§4a)**
+- `reports` app: `Report` model, WeasyPrint PDF generator, `generate` + `download`
+  endpoints.
+- Clinician-invite endpoint under `accounts`.
+
+### Explicitly out of scope
+- **Capture / video upload flow** — this is a mobile-only product surface (camera
+  + Placido attachment). It belongs to the separate **mobile** sub-project and
+  cannot be a web feature.
+- **Fluorescein and lipid *analysis*** — the web *display* includes these fields,
+  but the backend only populates NIBUT until the separate **backend-analysis**
+  sub-project lands. Web shows "—"/"Not assessed" for unpopulated fields.
 - Real end-to-end data verification (deferred; see §8).
 
 ---
@@ -54,6 +72,10 @@ CLAUDE.md). The web app targets these Django endpoints **via the BFF**:
 | Patient trend | `GET /api/patients/{id}/trend/` | NIBUT time series for charting |
 | Assessments | `GET/POST /api/assessments/` | filter by `patient`, `status`, `eye` |
 | Assessment detail | `GET/PATCH /api/assessments/{id}/` | includes `captures[].result` |
+| Generate report | `POST /api/reports/generate/` | **new** (§4a); `{assessment}` → `Report` |
+| Download report | `GET /api/reports/{id}/download/` | **new** (§4a); streams PDF |
+| List reports | `GET /api/reports/` | **new** (§4a); practice-scoped |
+| Invite clinician | `POST /api/auth/practice/clinicians/invite/` | **new** (§4a) |
 
 Key serializer field shapes (used to define TS types):
 - **Patient list:** `id, first_name, last_name, full_name, date_of_birth, latest_severity, updated_at`
@@ -124,6 +146,35 @@ Holds only **non-sensitive** session context derived from `me`
 
 ---
 
+## 4a. Backend Additions (required by reports & clinician admin)
+
+These are built as part of this sub-project because the web pages depend on them.
+Both follow the existing app's practice-scoping conventions.
+
+### `reports` app (currently stubbed)
+- **`Report` model:** `assessment (FK)`, `pdf_file (FileField)`, `generated_by
+  (FK Clinician, null)`, `created_at`, `status (pending|ready|failed)`.
+- **`generators.py`:** `generate_assessment_report(assessment) -> Report` —
+  renders an HTML template (practice header, patient demographics, per-capture
+  results with severity colours, NIBUT trend) to PDF via **WeasyPrint**, saves to
+  storage. Synchronous for MVP (reports are small); structured so it can move to a
+  Celery task later.
+- **Endpoints:** `POST /api/reports/generate/` (body `{assessment}`, practice-scoped,
+  returns the `Report`), `GET /api/reports/{id}/download/` (streams the PDF with
+  `Content-Disposition`), `GET /api/reports/` (list, practice-scoped).
+- **Serializer + URLs + admin** wired; `weasyprint` added to `requirements/base.txt`.
+
+### Clinician invite (`accounts`)
+- **Endpoint:** `POST /api/auth/practice/clinicians/invite/` — body `{email,
+  first_name, last_name, role}`. Creates an inactive `User` + `Clinician` in the
+  caller's practice and issues a single-use invite token (stored on a small
+  `ClinicianInvite` model). For MVP the response returns the invite link/token
+  (email delivery is a later concern); admin-role permission required.
+- This keeps registration **invite-based** per CLAUDE.md without building the full
+  email pipeline now.
+
+---
+
 ## 5. Data Layer
 
 - `lib/api.ts` — thin same-origin client wrapper over the BFF (`/api/proxy/...`).
@@ -133,7 +184,10 @@ Holds only **non-sensitive** session context derived from `me`
 - `hooks/usePatients.ts` — `usePatients(search, page)`, `usePatient(id)`,
   `useCreatePatient()`, `useUpdatePatient()`, `usePatientTrend(id)`.
 - `hooks/useAssessments.ts` — `useAssessments(filters)`, `useAssessment(id)`.
-- `hooks/usePractice.ts` — `usePractice()`, `useUpdatePractice()`.
+- `hooks/usePractice.ts` — `usePractice()`, `useUpdatePractice()`,
+  `useClinicians()`, `useInviteClinician()`.
+- `hooks/useReports.ts` — `useReports()`, `useGenerateReport()`, plus a download
+  helper that hits the BFF download proxy.
 - TanStack Query for caching/invalidation; React Hook Form + Zod for the
   login, new-patient, and settings forms (schemas in `lib/schemas.ts`).
 
@@ -153,12 +207,16 @@ src/app/
       [id]/
         page.tsx                # Profile: demographics, TrendChart, assessment history
         assessments/
-          [assessmentId]/page.tsx  # Assessment detail: captures + results
+          [assessmentId]/page.tsx  # Assessment detail: captures + results + "Generate report"
+    reports/
+      page.tsx                  # Reports list: generated PDFs, download
     settings/
       page.tsx                  # Practice details + editable NIBUT thresholds
+      clinicians/page.tsx       # Clinician admin: list + invite (admin role only)
   api/
     auth/{login,logout,me}/route.ts
     proxy/[...path]/route.ts    # generic authenticated proxy to Django
+    download/[id]/route.ts      # streams report PDF from Django through the cookie auth
   layout.tsx, globals.css
 ```
 
@@ -169,7 +227,11 @@ src/app/
 ### Components (mirroring CLAUDE.md structure)
 - `components/layout/`: `Sidebar`, `Header`.
 - `components/patients/`: `PatientList`, `PatientCard`, `PatientProfile`, `TrendChart`.
-- `components/assessments/`: `ResultsDisplay`, `TearFilmHeatmap`.
+- `components/assessments/`: `ResultsDisplay` (NIBUT + fluorescein + lipid),
+  `TearFilmHeatmap`.
+- `components/reports/`: `ReportPreview`, `GenerateReportButton`.
+- `components/settings/`: `ClinicianTable`, `InviteClinicianDialog`,
+  `ThresholdForm`.
 - `components/common/`: `StatusBadge` (severity → colour), `EmptyState`,
   `LoadingState`.
 - `components/ui/`: shadcn primitives (button, card, dialog, input, table, badge,
@@ -207,6 +269,12 @@ A lightweight automated check: a Vitest + Testing Library smoke test per page
 component rendering against mocked hooks, plus a unit test of the `severity.ts`
 banding logic against the threshold table.
 
+The **backend additions** (§4a) are verified independently with Django tests
+(`manage.py test apps.reports apps.accounts`): report generation produces a
+`Report` with a non-empty PDF, the download endpoint streams it, and the invite
+endpoint creates a scoped, inactive clinician and rejects non-admin callers.
+These don't depend on the web client and can run before it exists.
+
 ---
 
 ## 9. Risks & Notes
@@ -220,16 +288,35 @@ banding logic against the threshold table.
 - **`video_file`/`nibut_heatmap`/`thumbnail`** are media URLs served by Django in
   dev; `TearFilmHeatmap` renders the `nibut_heatmap` URL with a graceful fallback
   when absent (MVP backend may not yet produce one).
+- **WeasyPrint has native system dependencies** (Pango/Cairo/GDK-PixBuf) that are
+  awkward to install on Windows. Mitigations: (a) the generator is isolated behind
+  `generators.py` so the import is lazy and a missing native lib fails only the
+  report path, not the whole app; (b) backend verification of report generation
+  runs in the Docker/Linux image rather than bare Windows; (c) the PDF template is
+  plain HTML/CSS so an alternate engine (e.g. `reportlab`) could be swapped without
+  touching the endpoint contract if Windows-local generation is later needed.
+- **Backend tests** run against a test database via `manage.py test` (SQLite or
+  the Dockerised Postgres); they do not require the full dev stack to be up.
 
 ---
 
 ## 10. Deliverables Checklist
+
+**Backend additions**
+- [ ] `reports` app: `Report` model, WeasyPrint generator, serializer, endpoints, admin.
+- [ ] `weasyprint` added to requirements; migration created.
+- [ ] Clinician invite: `ClinicianInvite` model + invite endpoint (admin-gated).
+- [ ] Backend tests for report generation and invite.
+
+**Web client**
 - [ ] Next.js project scaffolded in `web/` (App Router, TS, Tailwind, shadcn).
 - [ ] Theme + fonts + design tokens wired.
 - [ ] Shared types completed and imported.
-- [ ] BFF route handlers (`login`, `logout`, `me`, proxy) + `serverFetch` refresh.
+- [ ] BFF route handlers (`login`, `logout`, `me`, proxy, download) + `serverFetch` refresh.
 - [ ] `middleware.ts` session guard.
-- [ ] Data hooks (auth, patients, assessments, practice).
-- [ ] Pages: login, dashboard, patient list, patient profile, assessment detail, settings.
-- [ ] Components + new-patient dialog + trend chart + results display.
+- [ ] Data hooks (auth, patients, assessments, practice, reports).
+- [ ] Pages: login, dashboard, patient list, patient profile, assessment detail,
+      reports, settings, clinician admin.
+- [ ] Components + new-patient dialog + trend chart + results display + report
+      preview + invite dialog.
 - [ ] Smoke tests + severity unit test; build/lint/type-check green.
