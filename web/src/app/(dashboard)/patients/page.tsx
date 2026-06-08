@@ -17,7 +17,7 @@ export default function PatientsPage() {
         <NewPatientDialog />
       </div>
       <Input placeholder="Search patients…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
-      {isLoading ? <LoadingState /> : <PatientList patients={(data?.results ?? []) as never} />}
+      {isLoading ? <LoadingState /> : <PatientList patients={data?.results ?? []} />}
     </div>
   )
 }

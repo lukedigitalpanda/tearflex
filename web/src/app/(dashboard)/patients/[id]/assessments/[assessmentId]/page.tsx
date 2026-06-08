@@ -32,7 +32,7 @@ export default function AssessmentDetailPage({ params }: { params: { assessmentI
             <div key={c.id} className="space-y-2">
               <h2 className="text-sm font-semibold text-slate-600">{c.test_type.toUpperCase()}</h2>
               {c.result
-                ? <ResultsDisplay result={c.result as never} thresholds={thresholds} />
+                ? <ResultsDisplay result={c.result} thresholds={thresholds} />
                 : <EmptyState title="Capture not yet analysed" />}
             </div>
           ))}

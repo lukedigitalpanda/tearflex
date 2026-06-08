@@ -1,13 +1,8 @@
 import Link from 'next/link'
 import { StatusBadge } from '@/components/common/StatusBadge'
-import type { Severity } from '@/lib/severity'
+import type { PatientListItem } from '@shared/types/patient'
 
-interface Row {
-  id: number; full_name: string; date_of_birth: string
-  latest_severity: Severity | null; updated_at: string
-}
-
-export function PatientCard({ patient }: { patient: Row }) {
+export function PatientCard({ patient }: { patient: PatientListItem }) {
   return (
     <Link href={`/patients/${patient.id}`}
       className="flex items-center justify-between rounded-lg border border-slate-300 bg-white px-4 py-3 hover:border-teal-600">

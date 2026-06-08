@@ -1,17 +1,7 @@
-import { nibutBand, severityMeta, type Severity, type NibutThresholds } from '@/lib/severity'
+import { nibutBand, severityMeta, type NibutThresholds } from '@/lib/severity'
 import { TearFilmHeatmap } from './TearFilmHeatmap'
 import { Card } from '@/components/ui/card'
-
-interface Result {
-  nibut_first_breakup_seconds: number | null
-  nibut_mean_breakup_seconds: number | null
-  nibut_heatmap: string | null
-  fluorescein_grade: number | null
-  lipid_grade: number | null
-  tear_meniscus_height_mm: number | null
-  dry_eye_severity: Severity | null
-  confidence_score: number | null
-}
+import type { TestResult } from '@shared/types/assessment'
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
@@ -22,7 +12,7 @@ function Metric({ label, value }: { label: string; value: string }) {
   )
 }
 
-export function ResultsDisplay({ result, thresholds }: { result: Result; thresholds: NibutThresholds }) {
+export function ResultsDisplay({ result, thresholds }: { result: TestResult; thresholds: NibutThresholds }) {
   const band = nibutBand(result.nibut_first_breakup_seconds, thresholds)
   const sev = severityMeta(result.dry_eye_severity)
 

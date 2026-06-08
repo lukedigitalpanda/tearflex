@@ -1,9 +1,14 @@
+export interface RefreshTokens {
+  access: string
+  refresh?: string
+}
+
 interface RefreshDeps {
   access: string | undefined
   refresh: string | undefined
   apiBase: string
   fetchImpl?: typeof fetch
-  onTokens?: (tokens: { access: string; refresh?: string }) => void
+  onTokens?: (tokens: RefreshTokens) => void
 }
 
 /**
@@ -28,7 +33,7 @@ export async function fetchWithRefresh(url: string, init: RequestInit, deps: Ref
   })
   if (!refreshRes.ok) return res // surface the original 401
 
-  const tokens = (await refreshRes.json()) as { access: string; refresh?: string }
+  const tokens = (await refreshRes.json()) as RefreshTokens
   deps.onTokens?.(tokens)
   res = await doFetch(url, withAuth(tokens.access))
   return res

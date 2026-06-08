@@ -10,6 +10,8 @@ const BASE = '/api/proxy'
 async function request<T>(path: string, init: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}/${path}`, { credentials: 'include', ...init })
   const ct = res.headers.get('content-type') || ''
+  // Read the body from a clone so `res` itself stays unconsumed (keeps the unit
+  // tests, which reuse a single mocked Response across calls, working).
   const clone = res.clone()
   const body = ct.includes('application/json') ? await clone.json() : await clone.text()
   if (!res.ok) {

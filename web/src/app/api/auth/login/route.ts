@@ -11,7 +11,16 @@ export async function POST(req: NextRequest) {
   if (!res.ok) {
     return NextResponse.json({ detail: 'Invalid credentials.' }, { status: res.status })
   }
-  const { access, refresh } = await res.json()
+  let access: string | undefined
+  let refresh: string | undefined
+  try {
+    ;({ access, refresh } = await res.json())
+  } catch {
+    return NextResponse.json({ detail: 'Unexpected response from authentication server.' }, { status: 502 })
+  }
+  if (!access) {
+    return NextResponse.json({ detail: 'Authentication server did not return a token.' }, { status: 502 })
+  }
   setAuthCookies(access, refresh)
   return NextResponse.json({ ok: true })
 }

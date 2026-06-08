@@ -20,6 +20,9 @@ export type PatientInput = z.infer<typeof patientSchema>
 export const thresholdSchema = z.object({
   nibut_normal_threshold: z.coerce.number().positive(),
   nibut_borderline_threshold: z.coerce.number().positive(),
+}).refine((v) => v.nibut_normal_threshold > v.nibut_borderline_threshold, {
+  message: 'Normal threshold must be greater than the borderline threshold.',
+  path: ['nibut_normal_threshold'],
 })
 
 export const inviteSchema = z.object({
