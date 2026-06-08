@@ -14,7 +14,8 @@ export function ThresholdForm() {
   const { data: practice } = usePractice()
   const update = useUpdatePractice()
   const { register, handleSubmit } = useForm<Form>({
-    resolver: zodResolver(thresholdSchema),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(thresholdSchema) as any,
     values: practice ? {
       nibut_normal_threshold: practice.nibut_normal_threshold,
       nibut_borderline_threshold: practice.nibut_borderline_threshold,
