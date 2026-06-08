@@ -25,3 +25,6 @@ staticfiles/
 
 # Docker
 pgdata/
+
+# Production env files (contain secrets)
+*.env.prod
