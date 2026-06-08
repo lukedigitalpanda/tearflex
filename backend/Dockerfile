@@ -4,7 +4,7 @@ FROM python:3.12-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpango-1.0-0 \
     libpangocairo-1.0-0 \
-    libgdk-pixbuf-xlib-2.0-0 \
+    libgdk-pixbuf-2.0-0 \
     libffi-dev \
     libcairo2 \
     libpq-dev \
@@ -18,10 +18,13 @@ RUN pip install --no-cache-dir -r requirements/base.txt
 
 COPY . .
 
-# Collect static files at build time (no DB needed; dummy SECRET_KEY sufficient)
+# Collect static files at build time with prod settings for correct WhiteNoise manifest hashing
 RUN SECRET_KEY=build-placeholder \
-    DJANGO_SETTINGS_MODULE=tearflex.settings.base \
+    DJANGO_SETTINGS_MODULE=tearflex.settings.prod \
     python manage.py collectstatic --noinput
+
+RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
+USER appuser
 
 EXPOSE 8000
 CMD ["gunicorn", "tearflex.wsgi:application", \
