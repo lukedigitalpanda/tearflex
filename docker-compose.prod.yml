@@ -53,7 +53,7 @@ services:
     restart: unless-stopped
     env_file: ./web/.env.prod
     ports:
-      - "127.0.0.1:3005:3000"
+      - "3005:3000"
     depends_on:
       - backend
 
