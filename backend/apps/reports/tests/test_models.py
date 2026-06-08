@@ -1,7 +1,7 @@
 import pytest
 
 from apps.reports.models import Report
-from conftest import AssessmentFactory, ClinicianFactory
+from conftest import AssessmentFactory
 
 
 @pytest.mark.django_db
