@@ -1,3 +1,5 @@
+import secrets
+
 from django.db import models
 from django.conf import settings
 
@@ -42,3 +44,26 @@ class Clinician(models.Model):
 
     def __str__(self):
         return f'{self.title} {self.user.get_full_name()}'.strip()
+
+
+class ClinicianInvite(models.Model):
+    """A single-use invite for a new clinician to join a practice."""
+    practice = models.ForeignKey(Practice, on_delete=models.CASCADE, related_name='invites')
+    email = models.EmailField()
+    role = models.CharField(max_length=20, choices=Clinician.ROLE_CHOICES, default='clinician')
+    token = models.CharField(max_length=64, unique=True, blank=True)
+    invited_by = models.ForeignKey(Clinician, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name='sent_invites')
+    clinician = models.OneToOneField(
+        Clinician, on_delete=models.SET_NULL, null=True, blank=True, related_name='invite'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    accepted_at = models.DateTimeField(null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        if not self.token:
+            self.token = secrets.token_urlsafe(32)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f'Invite for {self.email} → {self.practice.name}'
