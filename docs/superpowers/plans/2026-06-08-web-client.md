@@ -234,19 +234,43 @@ git commit -m "feat: add design tokens and Inter font"
 
 **Files:** creates `web/src/components/ui/*` and `web/src/lib/utils.ts`.
 
-- [ ] **Step 1: Init shadcn**
+> **IMPORTANT — pin shadcn to v2.3.0.** The latest shadcn CLI (4.x) targets
+> Tailwind v4 (oklch, CSS-based config) and breaks this Tailwind-v3 stack. Use
+> `shadcn@2.3.0`, which writes the classic `hsl(var())` config + `tailwindcss-animate`.
+
+- [ ] **Step 1: Init shadcn (v3-compatible)**
 
 ```bash
-npx shadcn@latest init -d
+npx --yes shadcn@2.3.0 init -d
 ```
 
-Accept defaults (creates `components.json`, `lib/utils.ts` with `cn`).
+Creates `components.json`, `lib/utils.ts` (`cn`), merges shadcn tokens into
+`tailwind.config.ts` (preserving the Task 2 teal/slate/status/coral tokens), and
+rewrites `globals.css`.
+
+- [ ] **Step 1b: Fix the globals.css colour space**
+
+shadcn 2.3.0 writes the CSS variables as `oklch(...)` but the config maps them via
+`hsl(var(--...))` — `hsl(oklch(...))` is invalid and breaks every semantic colour.
+Replace the `:root`/`.dark` blocks in `web/src/app/globals.css` with the canonical
+**hsl-triplet** shadcn theme (e.g. `--background: 0 0% 100%; --foreground: 222.2 84% 4.9%; --primary: 222.2 47.4% 11.2%; --border: 214.3 31.8% 91.4%; --ring: 222.2 84% 4.9%; --radius: 0.5rem;` plus the matching `card/popover/secondary/muted/accent/destructive/input` tokens and a `.dark` block), and keep the base layer:
+
+```css
+@layer base {
+  * { @apply border-border; }
+  body { @apply bg-background text-foreground; }
+}
+```
+
+Remove the scaffold's leftover `body { font-family: Arial }` / `.text-balance`.
 
 - [ ] **Step 2: Add the primitives the app uses**
 
 ```bash
-npx shadcn@latest add button card input label table badge dialog form select skeleton sonner
+npx --yes shadcn@2.3.0 add button card input label table badge dialog form select skeleton -y
 ```
+
+(`sonner` is intentionally omitted — unused.)
 
 - [ ] **Step 3: Verify typecheck**
 
