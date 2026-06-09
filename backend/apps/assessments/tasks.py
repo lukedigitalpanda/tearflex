@@ -1,6 +1,7 @@
 import time
 import logging
 from celery import shared_task
+from django.core.files.base import ContentFile
 
 logger = logging.getLogger(__name__)
 
@@ -23,13 +24,22 @@ def process_capture(self, capture_id):
 
         processing_time = time.time() - start_time
 
+        # Extract heatmap before model creation (not a direct model field)
+        heatmap_bytes = result_data.pop('heatmap_bytes', None)
+
         # Save results
-        TestResult.objects.create(
+        result = TestResult.objects.create(
             capture=capture,
             processing_time_seconds=processing_time,
-            analysis_version='1.0.0',
             **result_data,
         )
+
+        if heatmap_bytes:
+            result.nibut_heatmap.save(
+                f'heatmap_{capture.id}.png',
+                ContentFile(heatmap_bytes),
+                save=True,
+            )
 
         capture.status = 'analysed'
         capture.save()

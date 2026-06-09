@@ -1,103 +1,78 @@
-"""
-TearFlex Analysis Pipeline
-
-Phase 1: Deterministic image processing (no ML dependency).
-Analyses Placido ring distortion in video captures to measure NIBUT.
-"""
 import logging
+from django.core.files.base import ContentFile
+from .nibut import analyse_nibut
+from .utils import extract_frames, pil_image_to_django_file
 
 logger = logging.getLogger(__name__)
 
 
-def analyse_capture(capture):
+def analyse_capture(capture) -> dict:
     """
-    Main entry point. Routes to the appropriate analysis module based on test type.
-
-    Args:
-        capture: TestCapture model instance with video_file attached.
-
-    Returns:
-        dict: Result fields matching TestResult model fields.
+    Route a TestCapture to the correct analysis function.
+    Returns a dict of result fields for TestResult, plus optional 'heatmap_bytes' key.
     """
-    if capture.test_type == 'nibut':
-        return analyse_nibut(capture)
-    elif capture.test_type == 'fluorescein':
-        return analyse_fluorescein(capture)
-    elif capture.test_type == 'lipid':
-        return analyse_lipid(capture)
+    test_type = capture.test_type
+    video_path = capture.video_file.path
+
+    if test_type == 'nibut':
+        return _analyse_nibut(video_path)
+    elif test_type == 'fluorescein':
+        return _analyse_fluorescein(video_path)
+    elif test_type == 'lipid':
+        return _analyse_lipid(video_path)
     else:
-        raise ValueError(f'Unknown test type: {capture.test_type}')
+        raise ValueError(f"Unknown test type: {test_type!r}")
 
 
-def analyse_nibut(capture):
-    """
-    NIBUT analysis via Placido ring distortion measurement.
+def _analyse_nibut(video_path: str) -> dict:
+    """Run NIBUT analysis pipeline. Returns TestResult field dict + heatmap_bytes."""
+    frames = extract_frames(video_path, target_fps=10.0)
+    result = analyse_nibut(frames, fps=10.0)
 
-    Algorithm (Phase 1 - deterministic):
-    1. Extract frames at 10fps from the video
-    2. Detect Placido ring pattern in first frame (Hough circles)
-    3. Define region of interest (corneal reflection area)
-    4. For each frame: compute ring distortion metric via edge detection + fractal dimension
-    5. Build time series of distortion values
-    6. Detect first break-up (distortion exceeds threshold)
-    7. Detect mean break-up (average distortion exceeds threshold)
-    8. Generate heatmap overlay
+    heatmap_bytes = pil_image_to_django_file(result['heatmap_image'])
 
-    TODO: Implement with OpenCV + scikit-image
-    Currently returns placeholder data for API development.
-    """
-    logger.info(f'Analysing NIBUT capture {capture.id}')
+    first_bu = result['first_breakup_seconds']
+    if first_bu >= 10:
+        severity = 'normal'
+    elif first_bu >= 5:
+        severity = 'mild'
+    elif first_bu >= 2:
+        severity = 'moderate'
+    else:
+        severity = 'severe'
 
-    # PLACEHOLDER - replace with actual CV pipeline
-    # This allows the API and frontend to be developed in parallel
     return {
-        'nibut_first_breakup_seconds': 7.2,
-        'nibut_mean_breakup_seconds': 9.8,
-        'dry_eye_severity': 'mild',
-        'confidence_score': 0.85,
-        'raw_output': {
-            'algorithm': 'placeholder',
-            'note': 'Replace with actual NIBUT analysis pipeline',
-            'frames_analysed': 0,
-        },
+        'nibut_first_breakup_seconds': result['first_breakup_seconds'],
+        'nibut_mean_breakup_seconds': result['mean_breakup_seconds'],
+        'heatmap_bytes': heatmap_bytes,
+        'dry_eye_severity': severity,
+        'confidence_score': result['confidence'],
+        'analysis_version': 'nibut-v1',
+        'raw_output': {'frame_metrics': result['frame_metrics']},
     }
 
 
-def analyse_fluorescein(capture):
-    """
-    Fluorescein break-up analysis.
-
-    TODO: Implement fluorescein dye detection under blue light.
-    - Detect green fluorescence regions
-    - Measure time to first dark spot appearance
-    - Grade using Oxford scale (0-5)
-    """
-    logger.info(f'Analysing fluorescein capture {capture.id}')
-
+def _analyse_fluorescein(video_path: str) -> dict:
+    """Fluorescein analysis — algorithmic stub. Phase 2 will implement full detection."""
+    logger.info("Fluorescein analysis: returning placeholder (Phase 2 implementation pending)")
     return {
-        'fluorescein_grade': 2,
-        'fluorescein_breakup_seconds': 6.5,
+        'fluorescein_grade': 1,
+        'fluorescein_breakup_seconds': 8.0,
         'dry_eye_severity': 'mild',
-        'confidence_score': 0.75,
-        'raw_output': {'algorithm': 'placeholder'},
+        'confidence_score': 0.1,
+        'analysis_version': 'fluorescein-stub-v1',
+        'raw_output': {'note': 'Phase 1 placeholder'},
     }
 
 
-def analyse_lipid(capture):
-    """
-    Lipid layer thickness analysis.
-
-    TODO: Implement lipid layer interference pattern analysis.
-    - Detect interference colour fringes
-    - Classify using Guillon scale (1-5)
-    - Estimate thickness in nanometres
-    """
-    logger.info(f'Analysing lipid capture {capture.id}')
-
+def _analyse_lipid(video_path: str) -> dict:
+    """Lipid layer analysis — algorithmic stub. Phase 2 will implement full detection."""
+    logger.info("Lipid analysis: returning placeholder (Phase 2 implementation pending)")
     return {
-        'lipid_grade': 3,
-        'lipid_thickness_nm': 60.0,
+        'lipid_grade': 2,
+        'lipid_thickness_nm': 30.0,
         'dry_eye_severity': 'normal',
-        'confidence_score': 0.70,
-        'raw_output': {'algorithm': 'placeholder'},
+        'confidence_score': 0.1,
+        'analysis_version': 'lipid-stub-v1',
+        'raw_output': {'note': 'Phase 1 placeholder'},
     }
