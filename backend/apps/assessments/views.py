@@ -1,3 +1,4 @@
+from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied
@@ -43,7 +44,7 @@ class CaptureUploadView(generics.CreateAPIView):
     def perform_create(self, serializer):
         try:
             practice = self.request.user.clinician.practice
-        except Exception:
+        except (AttributeError, ObjectDoesNotExist):
             raise PermissionDenied()
         assessment = serializer.validated_data['assessment']
         if assessment.patient.practice_id != practice.id:
@@ -62,7 +63,7 @@ class CaptureDetailView(generics.RetrieveAPIView):
     def get_queryset(self):
         try:
             practice = self.request.user.clinician.practice
-        except Exception:
+        except (AttributeError, ObjectDoesNotExist):
             raise PermissionDenied()
         return TestCapture.objects.filter(assessment__patient__practice=practice)
 

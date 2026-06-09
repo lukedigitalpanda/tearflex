@@ -25,7 +25,7 @@ def test_upload_for_other_practice_is_rejected(api, clinician):
         'test_type': 'nibut',
         'video_file': io.BytesIO(b'fake'),
     }, format='multipart')
-    assert resp.status_code in (403, 404)
+    assert resp.status_code == 403
 
 
 @pytest.mark.django_db
