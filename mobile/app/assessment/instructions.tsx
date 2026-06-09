@@ -42,7 +42,8 @@ export default function InstructionsScreen() {
     testType: TestType;
   }>();
   const router = useRouter();
-  const instructions = INSTRUCTIONS[testType] ?? INSTRUCTIONS.nibut;
+  const safeType = testType in INSTRUCTIONS ? testType : ('nibut' as TestType);
+  const instructions = INSTRUCTIONS[safeType];
 
   return (
     <SafeAreaView className="flex-1 bg-slate-50">
