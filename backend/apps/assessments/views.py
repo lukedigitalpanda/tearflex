@@ -37,10 +37,15 @@ class AssessmentDetailView(PracticeScopedMixin, generics.RetrieveUpdateAPIView):
 class CaptureUploadView(generics.CreateAPIView):
     """Upload a video capture for analysis."""
     serializer_class = TestCaptureUploadSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
+        practice = self.request.user.clinician.practice
+        assessment = serializer.validated_data['assessment']
+        if assessment.patient.practice_id != practice.id:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied()
         capture = serializer.save()
-        # Trigger async analysis
         task = process_capture.delay(capture.id)
         capture.celery_task_id = task.id
         capture.status = 'processing'
@@ -49,6 +54,7 @@ class CaptureUploadView(generics.CreateAPIView):
 
 class CaptureDetailView(generics.RetrieveAPIView):
     serializer_class = TestCaptureSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         practice = self.request.user.clinician.practice
