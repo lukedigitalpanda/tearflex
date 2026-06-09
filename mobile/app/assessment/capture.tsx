@@ -5,6 +5,7 @@ import {
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AlignmentOverlay, type CaptureState } from '@/components/capture/AlignmentOverlay';
 import { CaptureButton } from '@/components/capture/CaptureButton';
 import { StatePrompt } from '@/components/capture/StatePrompt';
@@ -26,14 +27,18 @@ export default function CaptureScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [captureState, setCaptureState] = useState<CaptureState>('READY');
   const [elapsed, setElapsed] = useState(0);
+  const [cameraReady, setCameraReady] = useState(false);
   const cameraRef = useRef<CameraView>(null);
+  const isRecordingRef = useRef(false);
+  const insets = useSafeAreaInsets();
 
   // Simulated Placido ring detection — replace with real CV detection in Sprint 3
   useEffect(() => {
+    if (!cameraReady) return;
     const t1 = setTimeout(() => setCaptureState('ALIGNING'), 500);
     const t2 = setTimeout(() => setCaptureState('ALIGNED'), 2500);
     return () => { clearTimeout(t1); clearTimeout(t2); };
-  }, []);
+  }, [cameraReady]);
 
   // Recording elapsed timer
   useEffect(() => {
@@ -75,6 +80,8 @@ export default function CaptureScreen() {
   }
 
   async function handleStartRecording() {
+    if (isRecordingRef.current) return;
+    isRecordingRef.current = true;
     setCaptureState('RECORDING');
     try {
       const video = await cameraRef.current?.recordAsync({ maxDuration: 25 });
@@ -87,6 +94,8 @@ export default function CaptureScreen() {
       }
     } catch {
       setCaptureState('ALIGNED');
+    } finally {
+      isRecordingRef.current = false;
     }
   }
 
@@ -105,13 +114,15 @@ export default function CaptureScreen() {
         facing="back"
         mode="video"
         videoQuality="2160p"
+        mute
+        onCameraReady={() => setCameraReady(true)}
       />
 
       {/* Alignment overlay (centred on camera) */}
       <AlignmentOverlay state={captureState} />
 
       {/* Top bar */}
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
         <View style={{ opacity: captureState === 'RECORDING' ? 0 : 1 }} pointerEvents={captureState === 'RECORDING' ? 'none' : 'auto'}>
           <TouchableOpacity onPress={() => router.back()} style={styles.cancelBtn}>
             <Text style={styles.cancelText}>✕</Text>
@@ -147,7 +158,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 56,
     paddingHorizontal: 20,
   },
   cancelBtn: {
