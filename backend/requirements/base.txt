@@ -8,6 +8,10 @@ psycopg2-binary>=2.9,<3
 celery>=5.4,<6
 redis>=5.0,<6
 Pillow>=10.4,<11
+opencv-python-headless>=4.9,<5
+scikit-image>=0.23,<0.25
+scipy>=1.13,<2
+numpy>=1.26,<3
 gunicorn>=22,<23
 whitenoise>=6,<7
 # Testing (needed in container for CI/CD test runs)
