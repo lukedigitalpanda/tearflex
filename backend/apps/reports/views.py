@@ -3,9 +3,9 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 
 from apps.assessments.models import Assessment
-from .generators import generate_assessment_report
 from .models import Report
 from .serializers import GenerateReportSerializer, ReportSerializer
+from .tasks import generate_report_task
 
 
 class PracticeScopedReportMixin:
@@ -23,6 +23,7 @@ class ReportListView(PracticeScopedReportMixin, generics.ListAPIView):
 
 
 class GenerateReportView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
     serializer_class = GenerateReportSerializer
 
     def post(self, request):
@@ -36,8 +37,16 @@ class GenerateReportView(generics.GenericAPIView):
             )
         except Assessment.DoesNotExist:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
-        report = generate_assessment_report(assessment)
-        return Response(ReportSerializer(report).data, status=status.HTTP_201_CREATED)
+
+        report = Report.objects.create(
+            assessment=assessment,
+            generated_by=request.user.clinician,
+            status='pending',
+        )
+
+        generate_report_task.delay(assessment_id=assessment.pk)
+
+        return Response(ReportSerializer(report).data, status=status.HTTP_202_ACCEPTED)
 
 
 class DownloadReportView(PracticeScopedReportMixin, generics.GenericAPIView):
