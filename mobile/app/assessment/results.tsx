@@ -7,10 +7,13 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from 'react-native';
+import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { useGeneratePDFReport } from '@/hooks/useReports';
 import { NIBUTResult } from '@/components/results/NIBUTResult';
 import { MetricsGrid } from '@/components/results/MetricsGrid';
 import type { Severity } from '@/constants/colours';
@@ -38,6 +41,7 @@ interface CaptureResult {
 
 interface CaptureDetail {
   id: number;
+  assessment: number;
   test_type: 'nibut' | 'fluorescein' | 'lipid';
   status: 'uploaded' | 'processing' | 'analysed' | 'failed';
   captured_at: string;
@@ -64,6 +68,8 @@ export default function ResultsScreen() {
     enabled: !!captureId,
     staleTime: 60_000,
   });
+
+  const { generateAndGetUrl, isGenerating, pdfError } = useGeneratePDFReport();
 
   const resolvedTestType = toValidTestType(testType ?? data?.test_type);
 
@@ -103,6 +109,23 @@ export default function ResultsScreen() {
   }
 
   const result = data.result;
+
+  async function handleSharePDF() {
+    if (!data?.assessment) return;
+    const pdfUrl = await generateAndGetUrl(data.assessment);
+    if (!pdfUrl) return;
+
+    const localUri = (FileSystem.cacheDirectory ?? '') + `report_${data.assessment}.pdf`;
+    await FileSystem.downloadAsync(pdfUrl, localUri);
+
+    const canShare = await Sharing.isAvailableAsync();
+    if (canShare) {
+      await Sharing.shareAsync(localUri, {
+        mimeType: 'application/pdf',
+        dialogTitle: 'Share tear film report',
+      });
+    }
+  }
 
   // Build metrics grid items depending on test type
   const metricsItems: Array<{ label: string; value: string; unit?: string }> = [];
@@ -203,6 +226,16 @@ export default function ResultsScreen() {
             <Text style={styles.primaryButtonText}>Done</Text>
           </TouchableOpacity>
           <TouchableOpacity
+            style={[styles.secondaryButton, { marginBottom: 8 }, isGenerating && { opacity: 0.5 }]}
+            activeOpacity={0.8}
+            onPress={handleSharePDF}
+            disabled={isGenerating}
+          >
+            <Text style={styles.secondaryButtonText}>
+              {isGenerating ? 'Generating PDF…' : 'Share PDF'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
             style={styles.secondaryButton}
             activeOpacity={0.8}
             onPress={() => router.back()}
@@ -210,6 +243,11 @@ export default function ResultsScreen() {
             <Text style={styles.secondaryButtonText}>Repeat test</Text>
           </TouchableOpacity>
         </View>
+        {pdfError !== null && (
+          <Text style={{ color: '#F87171', fontSize: 12, textAlign: 'center', marginTop: 4 }}>
+            {pdfError}
+          </Text>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
