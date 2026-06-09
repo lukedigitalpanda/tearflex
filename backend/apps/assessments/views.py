@@ -1,5 +1,6 @@
 from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from .models import Assessment, TestCapture
 from .serializers import (
@@ -40,10 +41,12 @@ class CaptureUploadView(generics.CreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
-        practice = self.request.user.clinician.practice
+        try:
+            practice = self.request.user.clinician.practice
+        except Exception:
+            raise PermissionDenied()
         assessment = serializer.validated_data['assessment']
         if assessment.patient.practice_id != practice.id:
-            from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied()
         capture = serializer.save()
         task = process_capture.delay(capture.id)
@@ -57,7 +60,10 @@ class CaptureDetailView(generics.RetrieveAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        practice = self.request.user.clinician.practice
+        try:
+            practice = self.request.user.clinician.practice
+        except Exception:
+            raise PermissionDenied()
         return TestCapture.objects.filter(assessment__patient__practice=practice)
 
 

@@ -39,3 +39,15 @@ def test_unauthenticated_detail_is_rejected():
     client = APIClient()
     resp = client.get(f'/api/assessments/captures/{capture.id}/')
     assert resp.status_code == 401
+
+
+@pytest.mark.django_db
+def test_detail_for_other_practice_is_rejected(api):
+    from apps.assessments.models import TestCapture
+    other_assessment = AssessmentFactory()  # different practice
+    other_capture = TestCapture.objects.create(
+        assessment=other_assessment, test_type='nibut',
+        video_file='captures/test.mp4',
+    )
+    resp = api.get(f'/api/assessments/captures/{other_capture.id}/')
+    assert resp.status_code == 404
