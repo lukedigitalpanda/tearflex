@@ -13,13 +13,16 @@ export class ApiError extends Error {
 }
 
 export class AuthExpiredError extends Error {
-  name = 'AuthExpiredError';
+  constructor(message = 'Session expired') {
+    super(message);
+    this.name = 'AuthExpiredError';
+  }
 }
 
 async function makeRequest<T>(path: string, init: RequestInit, retry = true): Promise<T> {
   const { access, refresh } = await getTokens();
 
-  const res = await fetch(`${API_BASE}/${path}`, {
+  const res = await fetch(`${API_BASE}/${path.replace(/^\//, '')}`, {
     ...init,
     headers: {
       ...(init.headers as Record<string, string> | undefined),
@@ -94,13 +97,17 @@ export const api = {
     // React Native FormData accepts { uri, name, type } objects directly
     formData.append('video_file', { uri: file.uri, name: file.name, type: file.type } as unknown as Blob);
 
-    const res = await fetch(`${API_BASE}/${path}`, {
+    const res = await fetch(`${API_BASE}/${path.replace(/^\//, '')}`, {
       method: 'POST',
       headers: access ? { Authorization: `Bearer ${access}` } : {},
       body: formData,
       // Do NOT set Content-Type — fetch sets it automatically with the boundary
     });
 
+    if (res.status === 401) {
+      await clearTokens();
+      throw new AuthExpiredError('Session expired');
+    }
     if (!res.ok) {
       const body = await res.json().catch(() => ({})) as { detail?: string };
       throw new ApiError(res.status, body.detail ?? `Upload failed (${res.status})`);
@@ -116,7 +123,10 @@ export async function loginRequest(username: string, password: string): Promise<
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ username, password }),
   });
-  if (!res.ok) throw new ApiError(res.status, 'Invalid credentials');
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({})) as { detail?: string };
+    throw new ApiError(res.status, body.detail ?? 'Login failed');
+  }
   const { access, refresh } = await res.json() as { access: string; refresh: string };
   await setTokens(access, refresh);
 }
