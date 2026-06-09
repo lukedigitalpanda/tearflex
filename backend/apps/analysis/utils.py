@@ -29,7 +29,10 @@ def extract_frames(video_path: str, target_fps: float = ANALYSIS_FPS) -> list[np
         frame_idx += 1
 
     cap.release()
-    logger.debug("Extracted %d frames from %s", len(frames), video_path)
+    if not frames:
+        logger.warning("No frames extracted from %s — file may be empty or corrupt", video_path)
+    else:
+        logger.debug("Extracted %d frames from %s", len(frames), video_path)
     return frames
 
 
