@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { useLogin } from '@/hooks/useAuth';
 
@@ -6,6 +6,7 @@ export default function LoginScreen() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const login = useLogin();
+  const passwordRef = useRef<import('react-native').TextInput>(null);
 
   function handleLogin() {
     if (!username || !password) return;
@@ -29,6 +30,7 @@ export default function LoginScreen() {
           autoCapitalize="none"
           autoCorrect={false}
           returnKeyType="next"
+          onSubmitEditing={() => passwordRef.current?.focus()}
           placeholder="username"
           placeholderTextColor="#94a3b8"
         />
@@ -38,6 +40,7 @@ export default function LoginScreen() {
           className="bg-white border border-slate-300 rounded-lg px-3 py-3 text-slate-900 mb-6"
           value={password}
           onChangeText={setPassword}
+          ref={passwordRef}
           secureTextEntry
           returnKeyType="done"
           onSubmitEditing={handleLogin}

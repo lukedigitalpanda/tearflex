@@ -2,11 +2,19 @@ import '../global.css';
 import { useEffect, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, QueryCache } from '@tanstack/react-query';
+import { AuthExpiredError } from '@/lib/api';
 import { getTokens } from '@/lib/secureTokens';
 import { useAuthStore } from '@/store/auth';
 
 const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: (error) => {
+      if (error instanceof AuthExpiredError) {
+        useAuthStore.getState().clear();
+      }
+    },
+  }),
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
 });
 
@@ -39,10 +47,10 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
   // On mount: read SecureStore to determine initial auth state
   useEffect(() => {
-    getTokens().then(({ refresh }) => {
-      setAuthenticated(!!refresh);
-      setReady(true);
-    });
+    getTokens()
+      .then(({ refresh }) => { setAuthenticated(!!refresh); })
+      .catch(() => { setAuthenticated(false); })
+      .finally(() => { setReady(true); });
   }, []);
 
   // Redirect whenever auth state or route changes
