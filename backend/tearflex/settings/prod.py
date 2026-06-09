@@ -8,12 +8,12 @@ if not SECRET_KEY:
 
 DEBUG = False
 ALLOWED_HOSTS = os.environ.get(
-    'ALLOWED_HOSTS', 'tearflex.mydryeapp.co.uk,localhost'
+    'ALLOWED_HOSTS', 'tearflex.mydryeyeapp.co.uk,localhost'
 ).split(',')
 
 CORS_ALLOWED_ORIGINS = os.environ.get(
     'CORS_ALLOWED_ORIGINS',
-    'https://tearflex.mydryeapp.co.uk',
+    'https://tearflex.mydryeyeapp.co.uk',
 ).split(',')
 
 # Trust X-Forwarded-Proto from nginx
