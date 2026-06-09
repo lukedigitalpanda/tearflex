@@ -13,7 +13,9 @@ export function PatientCard({ patient }: { patient: PatientListItem }) {
     >
       <View className="flex-1 mr-3">
         <Text className="font-medium text-slate-900">{patient.full_name}</Text>
-        <Text className="text-xs text-slate-600 mt-0.5">DOB {patient.date_of_birth}</Text>
+        <Text className="text-xs text-slate-600 mt-0.5">
+          DOB {new Date(patient.date_of_birth).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+        </Text>
       </View>
       <StatusBadge severity={patient.latest_severity} />
     </TouchableOpacity>
