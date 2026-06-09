@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import * as Device from 'expo-device';
-import { api } from '@/lib/api';
+import { api, AuthExpiredError } from '@/lib/api';
 import type { TestType } from '@shared/types/assessment';
 
 export type CapturePhase = 'idle' | 'uploading' | 'polling' | 'error';
@@ -30,6 +30,7 @@ export function useCapture() {
       setCaptureId(result.id);
       setPhase('polling');
     } catch (e) {
+      if (e instanceof AuthExpiredError) throw e;
       setError(e instanceof Error ? e.message : 'Upload failed. Check your connection.');
       setPhase('error');
     }
