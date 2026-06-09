@@ -1,53 +1,185 @@
 <!DOCTYPE html>
-<html lang="en-gb">
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <style>
-    @page { size: A4; margin: 2cm; }
-    body { font-family: sans-serif; color: #0F172A; font-size: 12px; }
-    h1 { color: #0E7C7B; font-size: 22px; margin-bottom: 0; }
-    .practice { color: #475569; margin-bottom: 24px; }
-    .section { margin-bottom: 20px; }
-    .label { color: #475569; font-size: 10px; text-transform: uppercase; }
-    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-    th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #CBD5E1; }
-    .severity { font-weight: 600; }
-    .normal { color: #16a34a; } .mild { color: #d97706; }
-    .moderate { color: #ea580c; } .severe { color: #dc2626; }
-  </style>
+<meta charset="UTF-8">
+<style>
+  @page { size: A4; margin: 2cm; }
+  body { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; color: #1e293b; margin: 0; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0E7C7B; padding-bottom: 12px; margin-bottom: 20px; }
+  .practice-name { font-size: 16pt; font-weight: bold; color: #0E7C7B; }
+  .practice-address { font-size: 9pt; color: #475569; margin-top: 2px; }
+  .report-title { font-size: 12pt; font-weight: bold; text-align: right; }
+  .report-date { font-size: 9pt; color: #475569; text-align: right; }
+  .section { margin-bottom: 18px; }
+  .section-title { font-size: 9pt; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 10px; }
+  .patient-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .field-label { font-size: 8pt; color: #64748b; text-transform: uppercase; letter-spacing: 0.3px; }
+  .field-value { font-size: 10pt; font-weight: 600; margin-top: 1px; }
+  .capture-block { margin-bottom: 24px; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; }
+  .capture-header { background: #f8fafc; padding: 8px 12px; font-size: 9pt; font-weight: bold; color: #334155; }
+  .capture-body { padding: 12px; }
+  .metrics-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 12px; }
+  .metric-tile { background: #f8fafc; border-radius: 4px; padding: 8px 10px; }
+  .metric-value { font-size: 16pt; font-weight: bold; color: #0f172a; line-height: 1; }
+  .metric-unit { font-size: 9pt; color: #64748b; }
+  .metric-label { font-size: 8pt; color: #64748b; margin-top: 3px; }
+  .severity-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 8pt; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
+  .severity-normal   { background: #dcfce7; color: #166534; }
+  .severity-mild     { background: #fef3c7; color: #92400e; }
+  .severity-moderate { background: #fee2e2; color: #991b1b; }
+  .severity-severe   { background: #fce7f3; color: #831843; }
+  .heatmap-img { max-width: 240px; height: auto; border-radius: 4px; border: 1px solid #e2e8f0; margin-top: 10px; }
+  .heatmap-caption { font-size: 8pt; color: #64748b; margin-top: 4px; }
+  .no-result { color: #94a3b8; font-style: italic; font-size: 9pt; }
+  .thresholds-note { font-size: 8pt; color: #64748b; margin-top: 10px; padding: 6px 10px; background: #f1f5f9; border-radius: 4px; }
+  .footer { border-top: 1px solid #e2e8f0; padding-top: 8px; margin-top: 24px; font-size: 8pt; color: #94a3b8; display: flex; justify-content: space-between; }
+</style>
 </head>
 <body>
-  <h1>Tear Film Assessment Report</h1>
-  <div class="practice">{{ practice.name }} — {{ practice.city }}</div>
 
-  <div class="section">
-    <div class="label">Patient</div>
-    <div>{{ patient.full_name }} · DOB {{ patient.date_of_birth }}</div>
-    <div class="label" style="margin-top:8px;">Assessment</div>
-    <div>{{ assessment.get_eye_display }} eye · {{ assessment.assessed_at|date:"d/m/Y H:i" }}</div>
+<div class="header">
+  <div>
+    {% if practice %}
+    <div class="practice-name">{{ practice.name }}</div>
+    <div class="practice-address">{{ practice.city }}{% if practice.postcode %}, {{ practice.postcode }}{% endif %}</div>
+    {% else %}
+    <div class="practice-name">TearFlex Report</div>
+    {% endif %}
   </div>
+  <div>
+    <div class="report-title">Tear Film Assessment Report</div>
+    <div class="report-date">{{ assessment.assessed_at|date:"j F Y" }}</div>
+  </div>
+</div>
 
-  <div class="section">
-    <div class="label">Results</div>
-    <table>
-      <thead>
-        <tr><th>Test</th><th>NIBUT (first)</th><th>NIBUT (mean)</th><th>Severity</th></tr>
-      </thead>
-      <tbody>
-        {% for capture in captures %}
-        <tr>
-          <td>{{ capture.get_test_type_display }}</td>
-          <td>{{ capture.result.nibut_first_breakup_seconds|default:"—" }}</td>
-          <td>{{ capture.result.nibut_mean_breakup_seconds|default:"—" }}</td>
-          <td class="severity {{ capture.result.dry_eye_severity }}">
-            {{ capture.result.get_dry_eye_severity_display|default:"Not assessed" }}
-          </td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="4">No captures recorded.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+<div class="section">
+  <div class="section-title">Patient</div>
+  <div class="patient-grid">
+    <div>
+      <div class="field-label">Full name</div>
+      <div class="field-value">{{ patient.first_name }} {{ patient.last_name }}</div>
+    </div>
+    <div>
+      <div class="field-label">Date of birth</div>
+      <div class="field-value">{{ patient.date_of_birth|date:"j M Y" }}</div>
+    </div>
+    {% if patient.nhs_number %}
+    <div>
+      <div class="field-label">NHS number</div>
+      <div class="field-value">{{ patient.nhs_number }}</div>
+    </div>
+    {% endif %}
+    <div>
+      <div class="field-label">Eye assessed</div>
+      <div class="field-value">{{ assessment.get_eye_display }}</div>
+    </div>
+    {% if clinician %}
+    <div>
+      <div class="field-label">Clinician</div>
+      <div class="field-value">{{ clinician.user.get_full_name }}</div>
+    </div>
+    {% endif %}
   </div>
+</div>
+
+{% if assessment.notes %}
+<div class="section">
+  <div class="section-title">Notes</div>
+  <p style="margin:0; font-size:10pt;">{{ assessment.notes }}</p>
+</div>
+{% endif %}
+
+<div class="section">
+  <div class="section-title">Test Results</div>
+
+  {% for item in captures %}
+  {% with capture=item.capture result=item.result %}
+  <div class="capture-block">
+    <div class="capture-header">
+      {{ capture.get_test_type_display }}
+      &nbsp;&middot;&nbsp;
+      {{ capture.captured_at|date:"H:i" }}
+      &nbsp;&middot;&nbsp;
+      {% if result and result.dry_eye_severity %}
+        <span class="severity-badge severity-{{ result.dry_eye_severity }}">{{ result.dry_eye_severity|title }}</span>
+      {% else %}
+        <span class="no-result">Pending</span>
+      {% endif %}
+    </div>
+    <div class="capture-body">
+      {% if result %}
+        {% if capture.test_type == 'nibut' %}
+        <div class="metrics-row">
+          <div class="metric-tile">
+            <div class="metric-value">{% if result.nibut_first_breakup_seconds %}{{ result.nibut_first_breakup_seconds|floatformat:1 }}{% else %}&mdash;{% endif %}<span class="metric-unit">s</span></div>
+            <div class="metric-label">First break-up time</div>
+          </div>
+          <div class="metric-tile">
+            <div class="metric-value">{% if result.nibut_mean_breakup_seconds %}{{ result.nibut_mean_breakup_seconds|floatformat:1 }}{% else %}&mdash;{% endif %}<span class="metric-unit">s</span></div>
+            <div class="metric-label">Mean break-up time</div>
+          </div>
+          <div class="metric-tile">
+            <div class="metric-value">{% if result.confidence_score %}{{ result.confidence_score|floatformat:0 }}{% else %}&mdash;{% endif %}<span class="metric-unit">%</span></div>
+            <div class="metric-label">Analysis confidence</div>
+          </div>
+        </div>
+        {% if item.heatmap_uri %}
+        <div>
+          <img class="heatmap-img" src="{{ item.heatmap_uri }}" alt="Tear film heatmap">
+          <div class="heatmap-caption">Tear film break-up heatmap (red = high distortion)</div>
+        </div>
+        {% endif %}
+        {% endif %}
+
+        {% if capture.test_type == 'fluorescein' %}
+        <div class="metrics-row">
+          <div class="metric-tile">
+            <div class="metric-value">{% if result.fluorescein_grade is not None %}{{ result.fluorescein_grade }}/5{% else %}&mdash;{% endif %}</div>
+            <div class="metric-label">Oxford grade</div>
+          </div>
+          <div class="metric-tile">
+            <div class="metric-value">{% if result.fluorescein_breakup_seconds %}{{ result.fluorescein_breakup_seconds|floatformat:1 }}{% else %}&mdash;{% endif %}<span class="metric-unit">s</span></div>
+            <div class="metric-label">Break-up time</div>
+          </div>
+        </div>
+        {% endif %}
+
+        {% if capture.test_type == 'lipid' %}
+        <div class="metrics-row">
+          <div class="metric-tile">
+            <div class="metric-value">{% if result.lipid_grade is not None %}{{ result.lipid_grade }}/5{% else %}&mdash;{% endif %}</div>
+            <div class="metric-label">Guillon grade</div>
+          </div>
+          <div class="metric-tile">
+            <div class="metric-value">{% if result.lipid_thickness_nm %}{{ result.lipid_thickness_nm|floatformat:0 }}{% else %}&mdash;{% endif %}<span class="metric-unit">nm</span></div>
+            <div class="metric-label">Est. thickness</div>
+          </div>
+        </div>
+        {% endif %}
+
+        {% if result.tear_meniscus_height_mm is not None %}
+        <div style="margin-top:8px;font-size:9pt;"><strong>Tear meniscus height:</strong> {{ result.tear_meniscus_height_mm|floatformat:2 }} mm</div>
+        {% endif %}
+      {% else %}
+        <p class="no-result">Analysis not yet complete for this capture.</p>
+      {% endif %}
+    </div>
+  </div>
+  {% endwith %}
+  {% empty %}
+  <p class="no-result">No test captures for this assessment.</p>
+  {% endfor %}
+</div>
+
+<div class="thresholds-note">
+  <strong>NIBUT reference values (TFOS DEWS II):</strong>
+  Normal &ge; 10s &nbsp;|&nbsp; Borderline 5&ndash;9.9s &nbsp;|&nbsp; Concern &lt; 5s
+</div>
+
+<div class="footer">
+  <span>Generated by TearFlex &middot; tearflex.mydryeyeapp.co.uk</span>
+  <span>{{ assessment.assessed_at|date:"j F Y" }}</span>
+</div>
+
 </body>
 </html>
