@@ -32,6 +32,8 @@ def _analyse_nibut(video_path: str) -> dict:
     heatmap_bytes = pil_image_to_django_file(result['heatmap_image'])
 
     first_bu = result['first_breakup_seconds']
+    # Severity mapping: normal/mild follow TFOS DEWS II (≥10s / ≥5s).
+    # Moderate/severe sub-classifies the <5s concern band — TearFlex extension of the standard.
     if first_bu >= 10:
         severity = 'normal'
     elif first_bu >= 5:

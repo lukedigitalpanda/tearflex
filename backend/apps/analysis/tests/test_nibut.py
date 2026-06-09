@@ -72,7 +72,7 @@ def test_analyse_nibut_confidence_in_range():
 
 def test_analyse_nibut_raises_on_too_few_frames():
     with pytest.raises(ValueError, match="too short"):
-        analyse_nibut(_stable_frames(2), fps=10.0)
+        analyse_nibut(_stable_frames(5), fps=10.0)
 
 
 def test_analyse_nibut_frame_metrics_have_correct_structure():

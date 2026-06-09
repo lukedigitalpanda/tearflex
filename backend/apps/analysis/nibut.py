@@ -10,8 +10,8 @@ N_BASELINE = 5
 BREAKUP_THRESHOLD_MULTIPLIER = 1.5
 MIN_NIBUT_SECONDS = 0.3
 
-COLOUR_STABLE = (200, 100, 30)   # BGR blue-ish
-COLOUR_BREAKUP = (30, 30, 220)   # BGR red
+COLOUR_STABLE = (200, 100, 30)   # BGR: orange-blue gradient start (stable tear film)
+COLOUR_BREAKUP = (30, 30, 220)   # BGR: red (tear film break-up)
 
 
 def detect_breakup_times(
@@ -24,6 +24,8 @@ def detect_breakup_times(
     Given normalised distortion scores and fps, return (first_breakup_seconds, mean_breakup_seconds).
     If no break-up detected, first_breakup equals video duration.
     """
+    # distortions are z-scores relative to baseline (see normalise_distortions).
+    # A score of 1.5 means 1.5 standard deviations above baseline mean.
     threshold = threshold_multiplier
     first_breakup: float | None = None
     breakup_times: list[float] = []
@@ -36,7 +38,10 @@ def detect_breakup_times(
             breakup_times.append(t)
 
     if first_breakup is None:
-        first_breakup = (len(distortions) - 1) / fps
+        if breakup_times:
+            first_breakup = breakup_times[0]  # all frames exceeded threshold but t < MIN_NIBUT_SECONDS
+        else:
+            first_breakup = (len(distortions) - 1) / fps
 
     mean_breakup = float(np.mean(breakup_times)) if breakup_times else first_breakup
     return (round(first_breakup, 2), round(mean_breakup, 2))
@@ -78,8 +83,10 @@ def analyse_nibut(frames: list[np.ndarray], fps: float = 10.0) -> dict:
     Returns dict with: first_breakup_seconds, mean_breakup_seconds,
                        heatmap_image (PIL.Image), confidence, frame_metrics
     """
-    if len(frames) < 3:
-        raise ValueError("Video too short for NIBUT analysis (need at least 3 sampled frames)")
+    if len(frames) <= N_BASELINE:
+        raise ValueError(
+            f"Video too short for NIBUT analysis (need more than {N_BASELINE} sampled frames)"
+        )
 
     roi = detect_placido_roi(frames[0])
     x, y, w, h = roi
@@ -107,6 +114,7 @@ def analyse_nibut(frames: list[np.ndarray], fps: float = 10.0) -> dict:
     baseline = raw_densities[:N_BASELINE]
     baseline_mean = float(np.mean(baseline)) + 1e-9
     baseline_std = float(np.std(baseline))
+    # CV of baseline densities; * 4 maps a CV of 0.25 (noisy) to confidence ~0
     confidence = float(np.clip(1.0 - (baseline_std / baseline_mean) * 4, 0.05, 0.99))
 
     heatmap_img = generate_nibut_heatmap(frames[0], roi, distortions)
