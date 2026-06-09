@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, BackHandler, StyleSheet, ActivityIndicator,
 } from 'react-native';
@@ -6,8 +6,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useCapture } from '@/hooks/useCapture';
+import { useCapture, type CapturePhase } from '@/hooks/useCapture';
 import { api, AuthExpiredError } from '@/lib/api';
+import { useAuthStore } from '@/store/auth';
 import type { TestType } from '@shared/types/assessment';
 
 type CaptureStatusResponse = { status: string };
@@ -28,42 +29,20 @@ export default function ProcessingScreen() {
   }>();
 
   const { phase, captureId, error, upload } = useCapture();
-  const uploadCalledRef = useRef(false);
 
-  // Guard — redirect if required params are missing
+  // Upload once on mount; upload is stable (useCallback with no deps)
   useEffect(() => {
-    if (!assessmentId || !videoUri) {
-      router.replace('/(tabs)/');
-    }
-  }, [assessmentId, videoUri, router]);
-
-  // Upload once on mount
-  useEffect(() => {
-    if (uploadCalledRef.current) return;
-    if (!assessmentId || !videoUri) return;
-    if (!testType || !isTestType(testType)) {
-      router.replace('/(tabs)/');
-      return;
-    }
-
-    uploadCalledRef.current = true;
-    const resolvedTestType: TestType = testType;
-
-    upload({
-      assessmentId: Number(assessmentId),
-      testType: resolvedTestType,
-      videoUri,
-    }).catch((e: unknown) => {
-      if (e instanceof AuthExpiredError) {
-        // Root layout QueryCache handler clears auth — propagate by re-throwing
-        // but since this is async/void context, just let it bubble to the
-        // unhandled rejection handler which triggers auth reset in the app.
-        throw e;
-      }
-      // Other errors are handled inside the hook (sets phase to 'error')
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (!assessmentId || !videoUri) { router.replace('/(tabs)/'); return; }
+    if (!testType || !isTestType(testType)) { router.replace('/(tabs)/'); return; }
+    const resolvedTestType = testType as TestType;
+    upload({ assessmentId: Number(assessmentId), testType: resolvedTestType, videoUri })
+      .catch((e: unknown) => {
+        if (e instanceof AuthExpiredError) {
+          useAuthStore.getState().clear();
+        }
+        // Other errors are handled inside the hook (sets phase to 'error')
+      });
+  }, [assessmentId, videoUri, testType, upload, router]);
 
   // Block Android hardware back during upload/polling
   useEffect(() => {
@@ -79,7 +58,10 @@ export default function ProcessingScreen() {
   // Poll capture status once upload is done (phase === 'polling' and captureId is set)
   const { data: statusData } = useQuery<CaptureStatusResponse>({
     queryKey: ['capture-status', captureId],
-    queryFn: () => api.get<CaptureStatusResponse>(`assessments/captures/${captureId}/status/`),
+    queryFn: () => {
+      if (captureId === null) throw new Error('captureId is null');
+      return api.get<CaptureStatusResponse>(`assessments/captures/${captureId}/status/`);
+    },
     enabled: phase === 'polling' && captureId !== null,
     refetchInterval: (query) => {
       const s = query.state.data?.status;
@@ -103,10 +85,14 @@ export default function ProcessingScreen() {
 
   const isError = phase === 'error' || statusData?.status === 'failed';
 
-  const subtitle: string = (() => {
-    if (phase === 'uploading') return 'Uploading video...';
-    return 'Processing...';
-  })();
+  const phaseSubtitles: Record<CapturePhase, string> = {
+    idle: 'Preparing...',
+    uploading: 'Uploading video...',
+    polling: 'Running analysis...',
+    done: 'Done',
+    error: '',
+  };
+  const subtitle = phaseSubtitles[phase];
 
   if (isError) {
     return (
