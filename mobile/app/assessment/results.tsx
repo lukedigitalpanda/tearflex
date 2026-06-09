@@ -195,7 +195,7 @@ export default function ResultsScreen() {
             activeOpacity={0.8}
             onPress={() => router.replace('/(tabs)/')}
           >
-            <Text style={styles.primaryButtonText}>Save &amp; finish</Text>
+            <Text style={styles.primaryButtonText}>Save & finish</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.secondaryButton}
