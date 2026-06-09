@@ -112,11 +112,11 @@ export default function CaptureScreen() {
 
       {/* Top bar */}
       <View style={styles.topBar}>
-        {captureState !== 'RECORDING' && (
+        <View style={{ opacity: captureState === 'RECORDING' ? 0 : 1 }} pointerEvents={captureState === 'RECORDING' ? 'none' : 'auto'}>
           <TouchableOpacity onPress={() => router.back()} style={styles.cancelBtn}>
             <Text style={styles.cancelText}>✕</Text>
           </TouchableOpacity>
-        )}
+        </View>
         <Text style={styles.testLabel}>{TEST_LABELS[testType] ?? 'Capture'}</Text>
         <View style={{ width: 40 }} />
       </View>
