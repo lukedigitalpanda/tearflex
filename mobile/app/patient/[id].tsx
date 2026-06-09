@@ -16,7 +16,7 @@ export default function PatientProfileScreen() {
 
   const { data: patient, isLoading } = usePatient(patientId);
   const { data: trend } = usePatientTrend(patientId);
-  const { data: assessments } = useAssessments({ patient: patientId });
+  const { data: assessments, isLoading: assessmentsLoading } = useAssessments({ patient: patientId });
   const { data: me } = useMe();
 
   const thresholds = {
@@ -72,7 +72,9 @@ export default function PatientProfileScreen() {
         {/* Assessment history */}
         <View className="bg-white border border-slate-300 rounded-xl p-4 mt-4 mb-8">
           <Text className="font-semibold text-slate-900 mb-3">Assessments</Text>
-          {(assessments?.results.length ?? 0) === 0 ? (
+          {assessmentsLoading ? (
+            <LoadingState rows={3} />
+          ) : (assessments?.results.length ?? 0) === 0 ? (
             <EmptyState title="No assessments yet" />
           ) : (
             assessments!.results.map((a) => (

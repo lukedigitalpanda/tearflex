@@ -16,7 +16,7 @@ export function TrendChart({
   borderline?: number;
 }) {
   const { width } = useWindowDimensions();
-  const W = width - 32;
+  const W = width - 64;
   const H = 160;
   const innerW = W - PAD.left - PAD.right;
   const innerH = H - PAD.top - PAD.bottom;
