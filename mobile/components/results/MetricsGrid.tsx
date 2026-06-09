@@ -13,8 +13,8 @@ interface MetricsGridProps {
 export function MetricsGrid({ items }: MetricsGridProps) {
   return (
     <View style={styles.grid}>
-      {items.map((item, index) => (
-        <View key={index} style={styles.tile}>
+      {items.map((item) => (
+        <View key={item.label} style={styles.tile}>
           <View style={styles.valueRow}>
             <Text style={styles.value}>{item.value}</Text>
             {item.unit != null && <Text style={styles.unit}>{item.unit}</Text>}

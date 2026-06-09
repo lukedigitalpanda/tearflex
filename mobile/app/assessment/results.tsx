@@ -16,6 +16,13 @@ import { MetricsGrid } from '@/components/results/MetricsGrid';
 import type { Severity } from '@/constants/colours';
 import { colours } from '@/constants/colours';
 
+const VALID_TEST_TYPES = ['nibut', 'fluorescein', 'lipid'] as const;
+type ValidTestType = typeof VALID_TEST_TYPES[number];
+
+function toValidTestType(v: string | undefined): ValidTestType | undefined {
+  return VALID_TEST_TYPES.includes(v as ValidTestType) ? (v as ValidTestType) : undefined;
+}
+
 // Screen-local type — not added to shared types yet
 interface CaptureResult {
   nibut_first_breakup_seconds: number | null;
@@ -58,11 +65,7 @@ export default function ResultsScreen() {
     staleTime: 60_000,
   });
 
-  const resolvedTestType = (testType ?? data?.test_type) as
-    | 'nibut'
-    | 'fluorescein'
-    | 'lipid'
-    | undefined;
+  const resolvedTestType = toValidTestType(testType ?? data?.test_type);
 
   // Loading state
   if (isLoading) {
@@ -110,11 +113,13 @@ export default function ResultsScreen() {
       value: result?.nibut_mean_breakup_seconds?.toFixed(1) ?? '—',
       unit: 's',
     });
-    metricsItems.push({
-      label: 'Confidence',
-      value: ((result?.confidence_score ?? 0) * 100).toFixed(0),
-      unit: '%',
-    });
+    if (result?.confidence_score != null) {
+      metricsItems.push({
+        label: 'Confidence',
+        value: (result.confidence_score * 100).toFixed(0),
+        unit: '%',
+      });
+    }
   } else if (resolvedTestType === 'fluorescein') {
     metricsItems.push({
       label: 'Break-up time',
@@ -160,7 +165,7 @@ export default function ResultsScreen() {
             </Text>
             <Text style={styles.gradeSubLabel}>Fluorescein staining</Text>
           </View>
-        ) : (
+        ) : resolvedTestType === 'lipid' ? (
           <View style={styles.gradeCard}>
             <Text style={styles.gradeLabel}>Guillon Grade</Text>
             <Text style={styles.gradeValue}>
@@ -169,7 +174,7 @@ export default function ResultsScreen() {
             </Text>
             <Text style={styles.gradeSubLabel}>Lipid layer classification</Text>
           </View>
-        )}
+        ) : null}
 
         {/* Metrics grid */}
         {metricsItems.length > 0 && (
@@ -195,7 +200,7 @@ export default function ResultsScreen() {
             activeOpacity={0.8}
             onPress={() => router.replace('/(tabs)/')}
           >
-            <Text style={styles.primaryButtonText}>Save & finish</Text>
+            <Text style={styles.primaryButtonText}>Done</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.secondaryButton}
