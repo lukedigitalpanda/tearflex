@@ -18,7 +18,7 @@ def _heatmap_data_uri(result) -> str | None:
         encoded = base64.b64encode(data).decode('ascii')
         return f"data:image/png;base64,{encoded}"
     except Exception:
-        logger.warning("Could not read heatmap for result %s", getattr(result, 'pk', '?'))
+        logger.warning("Could not read heatmap for result %s", getattr(result, 'pk', '?'), exc_info=True)
         return None
 
 
@@ -35,10 +35,14 @@ def generate_assessment_report(assessment) -> 'Report':
         captures_with_results = []
         for capture in assessment.captures.select_related('result').order_by('captured_at'):
             result = getattr(capture, 'result', None)
+            confidence_pct = None
+            if result and result.confidence_score is not None:
+                confidence_pct = round(result.confidence_score * 100)
             captures_with_results.append({
                 'capture': capture,
                 'result': result,
                 'heatmap_uri': _heatmap_data_uri(result),
+                'confidence_pct': confidence_pct,
             })
 
         context = {

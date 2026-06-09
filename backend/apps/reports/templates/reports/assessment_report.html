@@ -119,7 +119,7 @@
             <div class="metric-label">Mean break-up time</div>
           </div>
           <div class="metric-tile">
-            <div class="metric-value">{% if result.confidence_score %}{{ result.confidence_score|floatformat:0 }}{% else %}&mdash;{% endif %}<span class="metric-unit">%</span></div>
+            <div class="metric-value">{% if item.confidence_pct != None %}{{ item.confidence_pct }}{% else %}&mdash;{% endif %}<span class="metric-unit">%</span></div>
             <div class="metric-label">Analysis confidence</div>
           </div>
         </div>
@@ -134,7 +134,7 @@
         {% if capture.test_type == 'fluorescein' %}
         <div class="metrics-row">
           <div class="metric-tile">
-            <div class="metric-value">{% if result.fluorescein_grade is not None %}{{ result.fluorescein_grade }}/5{% else %}&mdash;{% endif %}</div>
+            <div class="metric-value">{% if result.fluorescein_grade != None %}{{ result.fluorescein_grade }}/5{% else %}&mdash;{% endif %}</div>
             <div class="metric-label">Oxford grade</div>
           </div>
           <div class="metric-tile">
@@ -147,7 +147,7 @@
         {% if capture.test_type == 'lipid' %}
         <div class="metrics-row">
           <div class="metric-tile">
-            <div class="metric-value">{% if result.lipid_grade is not None %}{{ result.lipid_grade }}/5{% else %}&mdash;{% endif %}</div>
+            <div class="metric-value">{% if result.lipid_grade != None %}{{ result.lipid_grade }}/5{% else %}&mdash;{% endif %}</div>
             <div class="metric-label">Guillon grade</div>
           </div>
           <div class="metric-tile">
@@ -157,7 +157,7 @@
         </div>
         {% endif %}
 
-        {% if result.tear_meniscus_height_mm is not None %}
+        {% if result.tear_meniscus_height_mm != None %}
         <div style="margin-top:8px;font-size:9pt;"><strong>Tear meniscus height:</strong> {{ result.tear_meniscus_height_mm|floatformat:2 }} mm</div>
         {% endif %}
       {% else %}
