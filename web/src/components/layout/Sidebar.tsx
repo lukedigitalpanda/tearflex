@@ -14,7 +14,7 @@ const NAV = [
 export function Sidebar() {
   const pathname = usePathname()
   return (
-    <aside className="w-60 shrink-0 border-r border-slate-300 bg-white p-4">
+    <aside className="w-60 shrink-0 border-r border-border bg-card p-4">
       <div className="mb-8 px-2 text-xl font-bold text-teal-600">TearFlex</div>
       <nav className="space-y-1">
         {NAV.map(({ href, label, icon: Icon }) => {
@@ -22,7 +22,7 @@ export function Sidebar() {
           return (
             <Link key={href} href={href}
               className={cn('flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium',
-                active ? 'bg-teal-50 text-teal-700' : 'text-slate-600 hover:bg-slate-50')}>
+                active ? 'bg-teal-50 text-teal-700 dark:bg-teal-950 dark:text-teal-300' : 'text-muted-foreground hover:bg-muted')}>
               <Icon className="h-4 w-4" /> {label}
             </Link>
           )
