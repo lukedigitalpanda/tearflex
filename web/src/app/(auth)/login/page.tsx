@@ -18,10 +18,10 @@ export default function LoginPage() {
     login.mutate(data, { onSuccess: () => router.push('/') })
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50">
+    <div className="flex min-h-screen items-center justify-center bg-background">
       <Card className="w-full max-w-sm p-8">
         <h1 className="mb-1 text-2xl font-bold text-teal-600">TearFlex</h1>
-        <p className="mb-6 text-sm text-slate-600">Sign in to your practice account</p>
+        <p className="mb-6 text-sm text-muted-foreground">Sign in to your practice account</p>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
             <Label htmlFor="username">Username</Label>
