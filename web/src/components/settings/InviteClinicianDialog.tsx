@@ -40,7 +40,7 @@ export function InviteClinicianDialog() {
             <div><Label htmlFor="iem">Email</Label><Input id="iem" type="email" {...register('email')} /></div>
             <div>
               <Label htmlFor="irole">Role</Label>
-              <select id="irole" {...register('role')} className="h-9 w-full rounded-md border border-slate-300 px-2 text-sm">
+              <select id="irole" {...register('role')} className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm text-foreground">
                 <option value="clinician">Clinician</option>
                 <option value="technician">Technician</option>
                 <option value="admin">Practice Admin</option>

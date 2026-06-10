@@ -1,7 +1,7 @@
 export function TearFilmHeatmap({ url }: { url: string | null | undefined }) {
   if (!url) {
     return (
-      <div className="flex h-48 items-center justify-center rounded-lg bg-slate-50 text-sm text-slate-600">
+      <div className="flex h-48 items-center justify-center rounded-lg bg-muted text-sm text-muted-foreground">
         No heatmap available
       </div>
     )

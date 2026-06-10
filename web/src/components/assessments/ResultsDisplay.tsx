@@ -6,7 +6,7 @@ import type { TestResult } from '@shared/types/assessment'
 function Metric({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-xs uppercase text-slate-600">{label}</div>
+      <div className="text-xs uppercase text-muted-foreground">{label}</div>
       <div className="font-medium tabular-nums">{value}</div>
     </div>
   )
@@ -19,7 +19,7 @@ export function ResultsDisplay({ result, thresholds }: { result: TestResult; thr
   return (
     <div className="space-y-4">
       <Card className="p-6" style={{ backgroundColor: `${band.color}18` }}>
-        <div className="text-xs uppercase text-slate-600">NIBUT — first break-up</div>
+        <div className="text-xs uppercase text-muted-foreground">NIBUT — first break-up</div>
         <div className="text-5xl font-bold tabular-nums" style={{ color: band.color }}>
           {result.nibut_first_breakup_seconds != null ? `${result.nibut_first_breakup_seconds.toFixed(1)}s` : '—'}
         </div>
