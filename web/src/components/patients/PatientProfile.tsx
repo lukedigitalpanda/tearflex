@@ -4,6 +4,7 @@ import { usePatient, usePatientTrend } from '@/hooks/usePatients'
 import { useAssessments } from '@/hooks/useAssessments'
 import { usePractice } from '@/hooks/usePractice'
 import { TrendChart } from './TrendChart'
+import { EditPatientDialog } from './EditPatientDialog'
 import { Card } from '@/components/ui/card'
 import { LoadingState } from '@/components/common/LoadingState'
 import { EmptyState } from '@/components/common/EmptyState'
@@ -18,9 +19,12 @@ export function PatientProfile({ id }: { id: number }) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">{patient.full_name}</h1>
-        <p className="text-sm text-muted-foreground">DOB {patient.date_of_birth} · {patient.nhs_number || 'No NHS number'}</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">{patient.full_name}</h1>
+          <p className="text-sm text-muted-foreground">DOB {patient.date_of_birth} · {patient.nhs_number || 'No NHS number'}</p>
+        </div>
+        <EditPatientDialog patient={patient} />
       </div>
 
       <Card className="p-5">

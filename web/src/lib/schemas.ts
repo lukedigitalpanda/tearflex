@@ -9,11 +9,15 @@ export type LoginInput = z.infer<typeof loginSchema>
 export const patientSchema = z.object({
   first_name: z.string().min(1, 'Required'),
   last_name: z.string().min(1, 'Required'),
-  date_of_birth: z.string().min(1, 'Required'),
+  date_of_birth: z.string().min(1, 'Required').refine(
+    (v) => new Date(v) <= new Date(),
+    'Date of birth cannot be in the future',
+  ),
   sex: z.enum(['M', 'F', 'O']).optional().or(z.literal('')),
   email: z.string().email().optional().or(z.literal('')),
   phone: z.string().optional(),
-  nhs_number: z.string().optional(),
+  nhs_number: z.string().min(1, 'NHS number is required'),
+  notes: z.string().optional(),
 })
 export type PatientInput = z.infer<typeof patientSchema>
 

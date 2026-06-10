@@ -32,3 +32,14 @@ export function useCreatePatient() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['patients'] }),
   })
 }
+
+export function useUpdatePatient(id: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: Partial<Patient>) => api.patch<Patient>(`patients/${id}/`, data),
+    onSuccess: (updated) => {
+      qc.setQueryData(['patient', id], updated)
+      qc.invalidateQueries({ queryKey: ['patients'] })
+    },
+  })
+}
