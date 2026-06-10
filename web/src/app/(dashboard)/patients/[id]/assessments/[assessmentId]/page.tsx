@@ -22,7 +22,7 @@ export default function AssessmentDetailPage({ params }: { params: { assessmentI
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold">{assessment.patient_name}</h1>
-          <p className="text-sm text-slate-600">{assessment.eye} eye · {new Date(assessment.assessed_at).toLocaleString('en-GB')}</p>
+          <p className="text-sm text-muted-foreground">{assessment.eye} eye · {new Date(assessment.assessed_at).toLocaleString('en-GB')}</p>
         </div>
         <GenerateReportButton assessmentId={assessment.id} />
       </div>
@@ -31,7 +31,7 @@ export default function AssessmentDetailPage({ params }: { params: { assessmentI
         ? <EmptyState title="No captures in this assessment" />
         : assessment.captures.map((c: TestCapture) => (
             <div key={c.id} className="space-y-2">
-              <h2 className="text-sm font-semibold text-slate-600">{c.test_type.toUpperCase()}</h2>
+              <h2 className="text-sm font-semibold text-muted-foreground">{c.test_type.toUpperCase()}</h2>
               {c.result
                 ? <ResultsDisplay result={c.result} thresholds={thresholds} />
                 : <EmptyState title="Capture not yet analysed" />}

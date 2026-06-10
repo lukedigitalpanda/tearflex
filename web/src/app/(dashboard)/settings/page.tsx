@@ -11,7 +11,7 @@ export default function SettingsPage() {
       <h1 className="text-xl font-bold">Settings</h1>
       <Card className="p-5">
         <h2 className="mb-1 font-semibold">{practice?.name}</h2>
-        <p className="text-sm text-slate-600">{practice?.address_line_1}, {practice?.city}, {practice?.postcode}</p>
+        <p className="text-sm text-muted-foreground">{practice?.address_line_1}, {practice?.city}, {practice?.postcode}</p>
       </Card>
       <Card className="p-5">
         <h2 className="mb-3 font-semibold">Clinical thresholds</h2>
@@ -19,7 +19,7 @@ export default function SettingsPage() {
       </Card>
       <Card className="flex items-center justify-between p-5">
         <span className="font-semibold">Clinicians</span>
-        <Link href="/settings/clinicians" className="text-sm font-medium text-teal-700">Manage →</Link>
+        <Link href="/settings/clinicians" className="text-sm font-medium text-teal-700 dark:text-teal-400">Manage →</Link>
       </Card>
     </div>
   )
