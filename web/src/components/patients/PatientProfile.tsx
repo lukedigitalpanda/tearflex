@@ -20,7 +20,7 @@ export function PatientProfile({ id }: { id: number }) {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">{patient.full_name}</h1>
-        <p className="text-sm text-slate-600">DOB {patient.date_of_birth} · {patient.nhs_number || 'No NHS number'}</p>
+        <p className="text-sm text-muted-foreground">DOB {patient.date_of_birth} · {patient.nhs_number || 'No NHS number'}</p>
       </div>
 
       <Card className="p-5">
@@ -37,9 +37,9 @@ export function PatientProfile({ id }: { id: number }) {
             <div className="space-y-2">
               {assessments!.results.map((a) => (
                 <Link key={a.id} href={`/patients/${id}/assessments/${a.id}`}
-                  className="flex items-center justify-between rounded-md border border-slate-300 px-4 py-2 hover:border-teal-600">
+                  className="flex items-center justify-between rounded-md border border-border px-4 py-2 hover:border-teal-600">
                   <span className="text-sm">{a.eye} eye · {new Date(a.assessed_at).toLocaleDateString('en-GB')}</span>
-                  <span className="text-xs text-slate-600">{a.status}</span>
+                  <span className="text-xs text-muted-foreground">{a.status}</span>
                 </Link>
               ))}
             </div>
