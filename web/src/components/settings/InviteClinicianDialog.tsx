@@ -28,7 +28,7 @@ export function InviteClinicianDialog() {
         <DialogHeader><DialogTitle>Invite clinician</DialogTitle></DialogHeader>
         {result ? (
           <div className="space-y-2">
-            <p className="text-sm text-slate-600">Invite created for {result.email}. Share this link:</p>
+            <p className="text-sm text-muted-foreground">Invite created for {result.email}. Share this link:</p>
             <Input readOnly value={result.invite_url} onFocus={(e) => e.currentTarget.select()} />
           </div>
         ) : (
