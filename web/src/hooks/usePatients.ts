@@ -1,14 +1,18 @@
 'use client'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { useSession } from '@/store/session'
 import type { Paginated } from '@shared/types/api'
 import type { Patient, PatientListItem } from '@shared/types/patient'
 
 export function usePatients(search: string, page = 1) {
+  const me = useSession((s) => s.me)
+  const selectedPracticeId = useSession((s) => s.selectedPracticeId)
   const qs = new URLSearchParams({ page: String(page) })
   if (search) qs.set('search', search)
+  if (me?.user.is_superuser && selectedPracticeId) qs.set('practice_id', String(selectedPracticeId))
   return useQuery({
-    queryKey: ['patients', search, page],
+    queryKey: ['patients', search, page, selectedPracticeId],
     queryFn: () => api.get<Paginated<PatientListItem>>(`patients/?${qs.toString()}`),
   })
 }

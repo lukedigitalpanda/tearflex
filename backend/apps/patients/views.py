@@ -7,9 +7,16 @@ from .serializers import PatientSerializer, PatientListSerializer
 
 
 class PracticeScopedMixin:
-    """Ensure queryset is scoped to the current user's practice."""
+    """Scope queryset to the user's practice; superusers see all practices.
+    Superusers may pass ?practice_id=X to filter to a specific practice."""
     def get_queryset(self):
-        return super().get_queryset().filter(practice=self.request.user.clinician.practice)
+        qs = super().get_queryset()
+        if self.request.user.is_superuser:
+            practice_id = self.request.query_params.get('practice_id')
+            if practice_id:
+                return qs.filter(practice_id=practice_id)
+            return qs
+        return qs.filter(practice=self.request.user.clinician.practice)
 
     def perform_create(self, serializer):
         serializer.save(practice=self.request.user.clinician.practice)
@@ -32,7 +39,6 @@ class PatientDetailView(PracticeScopedMixin, generics.RetrieveUpdateDestroyAPIVi
     serializer_class = PatientSerializer
 
     def perform_destroy(self, instance):
-        """Soft delete."""
         instance.is_active = False
         instance.save()
 
@@ -41,9 +47,9 @@ class PatientDetailView(PracticeScopedMixin, generics.RetrieveUpdateDestroyAPIVi
 @permission_classes([permissions.IsAuthenticated])
 def patient_trend(request, pk):
     """Return NIBUT trend data for a patient's assessment history."""
-    practice = request.user.clinician.practice
+    qs = Patient.objects.all() if request.user.is_superuser else Patient.objects.filter(practice=request.user.clinician.practice)
     try:
-        patient = Patient.objects.get(pk=pk, practice=practice)
+        patient = qs.get(pk=pk)
     except Patient.DoesNotExist:
         return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
 

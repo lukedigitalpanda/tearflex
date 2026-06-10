@@ -12,9 +12,16 @@ from .tasks import process_capture
 
 
 class PracticeScopedMixin:
+    """Scope queryset to the user's practice; superusers see all practices.
+    Superusers may pass ?practice_id=X to filter to a specific practice."""
     def get_queryset(self):
-        practice = self.request.user.clinician.practice
-        return super().get_queryset().filter(patient__practice=practice)
+        qs = super().get_queryset()
+        if self.request.user.is_superuser:
+            practice_id = self.request.query_params.get('practice_id')
+            if practice_id:
+                return qs.filter(patient__practice_id=practice_id)
+            return qs
+        return qs.filter(patient__practice=self.request.user.clinician.practice)
 
 
 class AssessmentListCreateView(PracticeScopedMixin, generics.ListCreateAPIView):
@@ -42,13 +49,15 @@ class CaptureUploadView(generics.CreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
-        try:
-            practice = self.request.user.clinician.practice
-        except (AttributeError, ObjectDoesNotExist):
-            raise PermissionDenied()
-        assessment = serializer.validated_data['assessment']
-        if assessment.patient.practice_id != practice.id:
-            raise PermissionDenied()
+        user = self.request.user
+        if not user.is_superuser:
+            try:
+                practice = user.clinician.practice
+            except (AttributeError, ObjectDoesNotExist):
+                raise PermissionDenied()
+            assessment = serializer.validated_data['assessment']
+            if assessment.patient.practice_id != practice.id:
+                raise PermissionDenied()
         capture = serializer.save()
         task = process_capture.delay(capture.id)
         capture.celery_task_id = task.id
@@ -61,6 +70,8 @@ class CaptureDetailView(generics.RetrieveAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        if self.request.user.is_superuser:
+            return TestCapture.objects.all()
         try:
             practice = self.request.user.clinician.practice
         except (AttributeError, ObjectDoesNotExist):
@@ -72,9 +83,9 @@ class CaptureDetailView(generics.RetrieveAPIView):
 @permission_classes([permissions.IsAuthenticated])
 def capture_status(request, pk):
     """Poll the analysis status of a capture."""
-    practice = request.user.clinician.practice
+    qs = TestCapture.objects.all() if request.user.is_superuser else TestCapture.objects.filter(assessment__patient__practice=request.user.clinician.practice)
     try:
-        capture = TestCapture.objects.get(pk=pk, assessment__patient__practice=practice)
+        capture = qs.get(pk=pk)
     except TestCapture.DoesNotExist:
         return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
 
