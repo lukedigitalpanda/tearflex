@@ -77,6 +77,21 @@ export const nibutStepSchema = z.object({
 })
 export type NibutStepData = z.infer<typeof nibutStepSchema>
 
+export interface NibutThresholds {
+  normal: number     // >= normal → green
+  borderline: number // >= borderline → amber; < borderline → red
+}
+
+export function nibutBand(
+  value: number | null,
+  thresholds: NibutThresholds,
+): { label: string; color: string } {
+  if (value === null) return { label: '', color: '' }
+  if (value >= thresholds.normal) return { label: 'Normal', color: '#4ADE80' }
+  if (value >= thresholds.borderline) return { label: 'Borderline', color: '#FBBF24' }
+  return { label: 'Concern', color: '#F87171' }
+}
+
 export const fluoresceinStepSchema = z.object({
   fluorescein_grade: z.preprocess(
     (v) => (v === '' || v == null) ? undefined : v,
