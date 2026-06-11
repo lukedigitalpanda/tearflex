@@ -1,4 +1,5 @@
 from django.core.exceptions import ObjectDoesNotExist
+from django.db import transaction
 from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied
@@ -102,36 +103,37 @@ class ManualCaptureCreateView(generics.GenericAPIView):
         else:
             practice = assessment.patient.practice
 
-        capture = TestCapture.objects.create(
-            assessment=assessment,
-            test_type=data['test_type'],
-            source='manual',
-            status='analysed',
-        )
+        with transaction.atomic():
+            capture = TestCapture.objects.create(
+                assessment=assessment,
+                test_type=data['test_type'],
+                source='manual',
+                status='analysed',
+            )
 
-        nibut = data.get('nibut_first_breakup_seconds')
-        dry_eye_severity = None
-        if nibut is not None:
-            normal = practice.nibut_normal_threshold
-            borderline = practice.nibut_borderline_threshold
-            if nibut >= normal:
-                dry_eye_severity = 'normal'
-            elif nibut >= borderline:
-                dry_eye_severity = 'mild'
-            else:
-                dry_eye_severity = 'moderate'
+            nibut = data.get('nibut_first_breakup_seconds')
+            dry_eye_severity = None
+            if nibut is not None:
+                normal = practice.nibut_normal_threshold
+                borderline = practice.nibut_borderline_threshold
+                if nibut >= normal:
+                    dry_eye_severity = 'normal'
+                elif nibut >= borderline:
+                    dry_eye_severity = 'mild'
+                else:
+                    dry_eye_severity = 'moderate'
 
-        TestResult.objects.create(
-            capture=capture,
-            nibut_first_breakup_seconds=nibut,
-            nibut_mean_breakup_seconds=data.get('nibut_mean_breakup_seconds'),
-            fluorescein_grade=data.get('fluorescein_grade'),
-            fluorescein_breakup_seconds=data.get('fluorescein_breakup_seconds'),
-            lipid_grade=data.get('lipid_grade'),
-            lipid_thickness_nm=data.get('lipid_thickness_nm'),
-            tear_meniscus_height_mm=data.get('tear_meniscus_height_mm'),
-            dry_eye_severity=dry_eye_severity,
-        )
+            TestResult.objects.create(
+                capture=capture,
+                nibut_first_breakup_seconds=nibut,
+                nibut_mean_breakup_seconds=data.get('nibut_mean_breakup_seconds'),
+                fluorescein_grade=data.get('fluorescein_grade'),
+                fluorescein_breakup_seconds=data.get('fluorescein_breakup_seconds'),
+                lipid_grade=data.get('lipid_grade'),
+                lipid_thickness_nm=data.get('lipid_thickness_nm'),
+                tear_meniscus_height_mm=data.get('tear_meniscus_height_mm'),
+                dry_eye_severity=dry_eye_severity,
+            )
 
         capture_with_result = TestCapture.objects.select_related('result').get(pk=capture.pk)
         return Response(TestCaptureSerializer(capture_with_result).data, status=status.HTTP_201_CREATED)

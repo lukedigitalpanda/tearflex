@@ -59,6 +59,13 @@ class ManualCaptureSerializer(serializers.Serializer):
     lipid_thickness_nm = serializers.FloatField(required=False, allow_null=True)
     tear_meniscus_height_mm = serializers.FloatField(required=False, allow_null=True)
 
+    def validate(self, data):
+        if data.get('test_type') == 'nibut' and data.get('nibut_first_breakup_seconds') is None:
+            raise serializers.ValidationError(
+                {'nibut_first_breakup_seconds': 'This field is required for NIBUT tests.'}
+            )
+        return data
+
 
 class AssessmentListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for list views."""
