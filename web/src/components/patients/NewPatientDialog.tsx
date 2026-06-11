@@ -40,6 +40,7 @@ export function NewPatientDialog() {
             </select>
           </div>
           <div><Label htmlFor="nhs">NHS number <span className="text-xs text-red-500">* required</span></Label><Input id="nhs" {...register('nhs_number')} /></div>
+          <div><Label htmlFor="np-email">Email <span className="text-xs text-red-500">* required</span></Label><Input id="np-email" type="email" {...register('email')} /></div>
           <div>
             <Label htmlFor="np-phone">Phone <span className="text-xs text-red-500">* required</span></Label>
             <Controller name="phone" control={control} defaultValue=""

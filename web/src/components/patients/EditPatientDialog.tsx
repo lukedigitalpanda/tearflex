@@ -66,7 +66,7 @@ export function EditPatientDialog({ patient }: { patient: Patient }) {
             </select>
           </div>
           <div><Label htmlFor="ep-nhs">NHS number <span className="text-xs text-red-500">* required</span></Label><Input id="ep-nhs" {...register('nhs_number')} /></div>
-          <div><Label htmlFor="ep-email">Email</Label><Input id="ep-email" type="email" {...register('email')} /></div>
+          <div><Label htmlFor="ep-email">Email <span className="text-xs text-red-500">* required</span></Label><Input id="ep-email" type="email" {...register('email')} /></div>
           <div>
             <Label htmlFor="ep-phone">Phone <span className="text-xs text-red-500">* required</span></Label>
             <Controller name="phone" control={control}

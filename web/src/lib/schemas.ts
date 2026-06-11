@@ -15,7 +15,7 @@ export const patientSchema = z.object({
     'Date of birth cannot be in the future',
   ),
   sex: z.enum(['M', 'F', 'O'], { error: (iss) => ({ message: (iss as { input?: unknown }).input === '' ? 'Sex is required' : 'Invalid sex value' }) }),
-  email: z.string().email().optional().or(z.literal('')),
+  email: z.string().email('Enter a valid email address').min(1, 'Email is required'),
   phone: z.string().min(1, 'Phone is required').refine(
     (v) => isValidPhoneNumber(v),
     'Enter a valid phone number',
