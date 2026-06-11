@@ -20,11 +20,11 @@ class TestCaptureSerializer(serializers.ModelSerializer):
     class Meta:
         model = TestCapture
         fields = [
-            'id', 'assessment', 'test_type', 'video_file', 'thumbnail',
+            'id', 'assessment', 'test_type', 'source', 'video_file', 'thumbnail',
             'duration_seconds', 'resolution_width', 'resolution_height',
             'fps', 'device_model', 'status', 'captured_at', 'result',
         ]
-        read_only_fields = ['id', 'status', 'captured_at', 'thumbnail']
+        read_only_fields = ['id', 'status', 'captured_at', 'thumbnail', 'source']
 
 
 class TestCaptureUploadSerializer(serializers.ModelSerializer):
