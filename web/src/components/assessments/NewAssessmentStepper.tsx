@@ -70,10 +70,10 @@ export function NewAssessmentStepper({ patientId }: { patientId: number }) {
           onBack={() => setStep(2)}
         />
       )}
-      {step === 4 && data.eye && (
+      {step === 4 && data.eye && data.nibut && (
         <StepReview
           patientId={patientId}
-          stepData={{ ...data, eye: data.eye }}
+          stepData={{ ...data, eye: data.eye, nibut: data.nibut }}
           onBack={() => setStep(3)}
         />
       )}

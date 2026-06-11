@@ -10,7 +10,7 @@ import { usePractice } from '@/hooks/usePractice'
 
 interface Props {
   defaultValues?: NibutStepData | null
-  onNext: (data: NibutStepData | null) => void
+  onNext: (data: NibutStepData) => void
   onBack: () => void
 }
 
@@ -30,7 +30,7 @@ export function StepNibut({ defaultValues, onNext, onBack }: Props) {
   const band = nibutBand(Number(rawFirst) || null, thresholds)
 
   return (
-    <form onSubmit={handleSubmit((d) => onNext(d))} className="space-y-5">
+    <form onSubmit={handleSubmit(onNext)} className="space-y-5">
       <div>
         <Label htmlFor="nibut-first">First break-up time (seconds)</Label>
         <Input
@@ -65,7 +65,6 @@ export function StepNibut({ defaultValues, onNext, onBack }: Props) {
       </div>
       <div className="flex gap-3 pt-2">
         <Button type="button" variant="outline" onClick={onBack} className="flex-1">Back</Button>
-        <Button type="button" variant="outline" onClick={() => onNext(null)} className="flex-1">Skip</Button>
         <Button type="submit" className="flex-1 bg-teal-600 hover:bg-teal-700">Continue</Button>
       </div>
     </form>

@@ -13,7 +13,7 @@ interface Props {
   patientId: number
   stepData: {
     eye: EyeStepData
-    nibut: NibutStepData | null
+    nibut: NibutStepData
     fluorescein: FluoresceinStepData | null
     lipid: LipidStepData | null
   }
@@ -40,15 +40,14 @@ export function StepReview({ patientId, stepData, onBack }: Props) {
       const assessment = await createAssessment.mutateAsync({ patient: patientId, eye: stepData.eye.eye })
       savedAssessmentId = assessment.id
 
-      const captureJobs = []
-      if (stepData.nibut) {
-        captureJobs.push(createCapture.mutateAsync({
+      const captureJobs = [
+        createCapture.mutateAsync({
           assessment: assessment.id,
           test_type: 'nibut',
           nibut_first_breakup_seconds: stepData.nibut.nibut_first_breakup_seconds,
           nibut_mean_breakup_seconds: stepData.nibut.nibut_mean_breakup_seconds ?? undefined,
-        }))
-      }
+        }),
+      ]
       if (stepData.fluorescein) {
         captureJobs.push(createCapture.mutateAsync({
           assessment: assessment.id,
@@ -82,7 +81,7 @@ export function StepReview({ patientId, stepData, onBack }: Props) {
   }
 
   const nibut = stepData.nibut
-  const band = nibutBand(nibut?.nibut_first_breakup_seconds ?? null, thresholds)
+  const band = nibutBand(nibut.nibut_first_breakup_seconds, thresholds)
 
   return (
     <div className="space-y-5">
@@ -90,13 +89,9 @@ export function StepReview({ patientId, stepData, onBack }: Props) {
         <Row label="Eye" value={<span className="capitalize">{stepData.eye.eye} eye</span>} />
         <Row
           label="NIBUT — first break-up"
-          value={
-            nibut
-              ? <span className="tabular-nums font-medium" style={{ color: band.color }}>{nibut.nibut_first_breakup_seconds}s — {band.label}</span>
-              : <Skipped />
-          }
+          value={<span className="tabular-nums font-medium" style={{ color: band.color }}>{nibut.nibut_first_breakup_seconds}s — {band.label}</span>}
         />
-        {nibut?.nibut_mean_breakup_seconds != null && (
+        {nibut.nibut_mean_breakup_seconds != null && (
           <Row label="NIBUT — mean" value={<span className="tabular-nums">{nibut.nibut_mean_breakup_seconds}s</span>} />
         )}
         <Row
