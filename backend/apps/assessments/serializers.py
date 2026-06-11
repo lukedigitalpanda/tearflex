@@ -45,7 +45,19 @@ class AssessmentSerializer(serializers.ModelSerializer):
             'id', 'patient', 'patient_name', 'clinician', 'clinician_name',
             'eye', 'notes', 'status', 'assessed_at', 'updated_at', 'captures',
         ]
-        read_only_fields = ['id', 'status', 'assessed_at', 'updated_at', 'clinician']
+        read_only_fields = ['id', 'assessed_at', 'updated_at', 'clinician']
+
+
+class ManualCaptureSerializer(serializers.Serializer):
+    assessment = serializers.PrimaryKeyRelatedField(queryset=Assessment.objects.all())
+    test_type = serializers.ChoiceField(choices=TestCapture.TEST_TYPE_CHOICES)
+    nibut_first_breakup_seconds = serializers.FloatField(required=False, allow_null=True)
+    nibut_mean_breakup_seconds = serializers.FloatField(required=False, allow_null=True)
+    fluorescein_grade = serializers.IntegerField(required=False, allow_null=True)
+    fluorescein_breakup_seconds = serializers.FloatField(required=False, allow_null=True)
+    lipid_grade = serializers.IntegerField(required=False, allow_null=True)
+    lipid_thickness_nm = serializers.FloatField(required=False, allow_null=True)
+    tear_meniscus_height_mm = serializers.FloatField(required=False, allow_null=True)
 
 
 class AssessmentListSerializer(serializers.ModelSerializer):

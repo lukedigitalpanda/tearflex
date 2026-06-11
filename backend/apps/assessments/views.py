@@ -3,10 +3,11 @@ from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
-from .models import Assessment, TestCapture
+from .models import Assessment, TestCapture, TestResult
 from .serializers import (
     AssessmentSerializer, AssessmentListSerializer,
     TestCaptureSerializer, TestCaptureUploadSerializer,
+    ManualCaptureSerializer,
 )
 from .tasks import process_capture
 
@@ -77,6 +78,63 @@ class CaptureDetailView(generics.RetrieveAPIView):
         except (AttributeError, ObjectDoesNotExist):
             raise PermissionDenied()
         return TestCapture.objects.filter(assessment__patient__practice=practice)
+
+
+class ManualCaptureCreateView(generics.GenericAPIView):
+    serializer_class = ManualCaptureSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user = request.user
+        data = serializer.validated_data
+        assessment = data['assessment']
+
+        if not user.is_superuser:
+            try:
+                practice = user.clinician.practice
+            except (AttributeError, ObjectDoesNotExist):
+                raise PermissionDenied()
+            if assessment.patient.practice_id != practice.id:
+                raise PermissionDenied()
+        else:
+            practice = assessment.patient.practice
+
+        capture = TestCapture.objects.create(
+            assessment=assessment,
+            test_type=data['test_type'],
+            source='manual',
+            status='analysed',
+        )
+
+        nibut = data.get('nibut_first_breakup_seconds')
+        dry_eye_severity = None
+        if nibut is not None:
+            normal = practice.nibut_normal_threshold
+            borderline = practice.nibut_borderline_threshold
+            if nibut >= normal:
+                dry_eye_severity = 'normal'
+            elif nibut >= borderline:
+                dry_eye_severity = 'mild'
+            else:
+                dry_eye_severity = 'moderate'
+
+        TestResult.objects.create(
+            capture=capture,
+            nibut_first_breakup_seconds=nibut,
+            nibut_mean_breakup_seconds=data.get('nibut_mean_breakup_seconds'),
+            fluorescein_grade=data.get('fluorescein_grade'),
+            fluorescein_breakup_seconds=data.get('fluorescein_breakup_seconds'),
+            lipid_grade=data.get('lipid_grade'),
+            lipid_thickness_nm=data.get('lipid_thickness_nm'),
+            tear_meniscus_height_mm=data.get('tear_meniscus_height_mm'),
+            dry_eye_severity=dry_eye_severity,
+        )
+
+        capture_with_result = TestCapture.objects.select_related('result').get(pk=capture.pk)
+        return Response(TestCaptureSerializer(capture_with_result).data, status=status.HTTP_201_CREATED)
 
 
 @api_view(['GET'])
