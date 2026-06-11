@@ -30,12 +30,15 @@ export function StepReview({ patientId, stepData, onBack }: Props) {
   const createAssessment = useCreateAssessment()
   const createCapture = useCreateManualCapture()
   const [error, setError] = useState<string | null>(null)
-  const isSaving = createAssessment.isPending || createCapture.isPending
+  const [saving, setSaving] = useState(false)
 
   const handleSave = async () => {
     setError(null)
+    setSaving(true)
+    let savedAssessmentId: number | null = null
     try {
       const assessment = await createAssessment.mutateAsync({ patient: patientId, eye: stepData.eye.eye })
+      savedAssessmentId = assessment.id
 
       const captureJobs = []
       if (stepData.nibut) {
@@ -67,7 +70,14 @@ export function StepReview({ patientId, stepData, onBack }: Props) {
       await api.patch(`assessments/${assessment.id}/`, { status: 'complete' })
       router.push(`/patients/${patientId}/assessments/${assessment.id}`)
     } catch {
+      if (savedAssessmentId !== null) {
+        // captures saved, status patch failed — navigate anyway
+        router.push(`/patients/${patientId}/assessments/${savedAssessmentId}`)
+        return
+      }
       setError('Something went wrong saving the assessment. Please try again.')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -104,11 +114,11 @@ export function StepReview({ patientId, stepData, onBack }: Props) {
       </Card>
       {error && <p className="text-sm text-red-500">{error}</p>}
       <div className="flex gap-3 pt-2">
-        <Button type="button" variant="outline" onClick={onBack} className="flex-1" disabled={isSaving}>
+        <Button type="button" variant="outline" onClick={onBack} className="flex-1" disabled={saving}>
           Back
         </Button>
-        <Button type="button" onClick={handleSave} className="flex-1 bg-teal-600 hover:bg-teal-700" disabled={isSaving}>
-          {isSaving ? 'Saving…' : 'Save assessment'}
+        <Button type="button" onClick={handleSave} className="flex-1 bg-teal-600 hover:bg-teal-700" disabled={saving}>
+          {saving ? 'Saving…' : 'Save assessment'}
         </Button>
       </div>
     </div>
