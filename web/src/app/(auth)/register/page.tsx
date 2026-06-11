@@ -60,12 +60,12 @@ function RegisterForm() {
       {error && <p className="mb-4 rounded bg-destructive/10 p-3 text-sm text-status-severe">{error}</p>}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>
-          <Label htmlFor="password">Password</Label>
+          <Label htmlFor="password">Password <span className="text-xs text-red-500">* required</span></Label>
           <Input id="password" type="password" {...register('password')} />
           {errors.password && <p className="mt-1 text-xs text-status-severe">{errors.password.message}</p>}
         </div>
         <div>
-          <Label htmlFor="confirm">Confirm password</Label>
+          <Label htmlFor="confirm">Confirm password <span className="text-xs text-red-500">* required</span></Label>
           <Input id="confirm" type="password" {...register('confirm')} />
           {errors.confirm && <p className="mt-1 text-xs text-status-severe">{errors.confirm.message}</p>}
         </div>

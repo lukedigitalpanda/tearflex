@@ -25,7 +25,7 @@ export function StepFluorescein({ defaultValues, onNext, onBack }: Props) {
   return (
     <form onSubmit={handleSubmit((d) => onNext(d))} className="space-y-5">
       <div>
-        <Label>Grade — Oxford scale (0–5, optional)</Label>
+        <Label>Grade — Oxford scale (0–5)</Label>
         <div className="mt-2 flex flex-wrap gap-2">
           {OXFORD_LABELS.map((label, i) => (
             <button
@@ -47,7 +47,7 @@ export function StepFluorescein({ defaultValues, onNext, onBack }: Props) {
         )}
       </div>
       <div>
-        <Label htmlFor="fluor-but">Break-up time (seconds, optional)</Label>
+        <Label htmlFor="fluor-but">Break-up time (seconds)</Label>
         <Input
           id="fluor-but"
           type="number"

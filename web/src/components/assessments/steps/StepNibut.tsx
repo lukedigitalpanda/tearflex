@@ -32,7 +32,7 @@ export function StepNibut({ defaultValues, onNext, onBack }: Props) {
   return (
     <form onSubmit={handleSubmit(onNext)} className="space-y-5">
       <div>
-        <Label htmlFor="nibut-first">First break-up time (seconds)</Label>
+        <Label htmlFor="nibut-first">First break-up time (seconds) <span className="text-xs text-red-500">* required</span></Label>
         <Input
           id="nibut-first"
           type="number"
@@ -49,7 +49,7 @@ export function StepNibut({ defaultValues, onNext, onBack }: Props) {
             : null}
       </div>
       <div>
-        <Label htmlFor="nibut-mean">Mean break-up time (seconds, optional)</Label>
+        <Label htmlFor="nibut-mean">Mean break-up time (seconds)</Label>
         <Input
           id="nibut-mean"
           type="number"

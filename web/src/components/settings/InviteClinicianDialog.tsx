@@ -34,12 +34,12 @@ export function InviteClinicianDialog() {
         ) : (
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <div><Label htmlFor="ifn">First name</Label><Input id="ifn" {...register('first_name')} /></div>
-              <div><Label htmlFor="iln">Last name</Label><Input id="iln" {...register('last_name')} /></div>
+              <div><Label htmlFor="ifn">First name <span className="text-xs text-red-500">* required</span></Label><Input id="ifn" {...register('first_name')} /></div>
+              <div><Label htmlFor="iln">Last name <span className="text-xs text-red-500">* required</span></Label><Input id="iln" {...register('last_name')} /></div>
             </div>
-            <div><Label htmlFor="iem">Email</Label><Input id="iem" type="email" {...register('email')} /></div>
+            <div><Label htmlFor="iem">Email <span className="text-xs text-red-500">* required</span></Label><Input id="iem" type="email" {...register('email')} /></div>
             <div>
-              <Label htmlFor="irole">Role</Label>
+              <Label htmlFor="irole">Role <span className="text-xs text-red-500">* required</span></Label>
               <select id="irole" {...register('role')} className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm text-foreground">
                 <option value="clinician">Clinician</option>
                 <option value="technician">Technician</option>

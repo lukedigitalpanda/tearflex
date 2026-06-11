@@ -26,6 +26,36 @@ export function useLogin() {
   })
 }
 
+export function useForgotPassword() {
+  return useMutation({
+    mutationFn: (data: { email: string }) =>
+      fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(data),
+      }).then(async (r) => {
+        const json = await r.json().catch(() => ({}))
+        if (!r.ok) throw new Error(json.detail || 'Request failed')
+        return json
+      }),
+  })
+}
+
+export function useResetPassword() {
+  return useMutation({
+    mutationFn: (data: { token: string; password: string }) =>
+      fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(data),
+      }).then(async (r) => {
+        const json = await r.json().catch(() => ({}))
+        if (!r.ok) throw new Error(json.token?.[0] ?? json.password?.[0] ?? json.detail ?? 'Reset failed')
+        return json
+      }),
+  })
+}
+
 export function useLogout() {
   const qc = useQueryClient()
   const setMe = useSession((s) => s.setMe)

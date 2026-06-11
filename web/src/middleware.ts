@@ -2,14 +2,17 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 export function middleware(req: NextRequest) {
   const hasSession = req.cookies.has('tf_refresh')
-  const isLogin = req.nextUrl.pathname.startsWith('/login')
+  const isPublicAuth = req.nextUrl.pathname.startsWith('/login') ||
+    req.nextUrl.pathname.startsWith('/register') ||
+    req.nextUrl.pathname.startsWith('/forgot-password') ||
+    req.nextUrl.pathname.startsWith('/reset-password')
 
-  if (!hasSession && !isLogin) {
+  if (!hasSession && !isPublicAuth) {
     const url = req.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
-  if (hasSession && isLogin) {
+  if (hasSession && req.nextUrl.pathname.startsWith('/login')) {
     const url = req.nextUrl.clone()
     url.pathname = '/'
     return NextResponse.redirect(url)

@@ -1,4 +1,6 @@
 'use client'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useMe, useLogout } from '@/hooks/useAuth'
 import { usePractice, usePractices } from '@/hooks/usePractice'
 import { useSession } from '@/store/session'
@@ -7,24 +9,32 @@ import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/u
 import { ThemeToggle } from './ThemeToggle'
 
 function PracticeSelector() {
+  const router = useRouter()
   const { data: practices } = usePractices()
   const selectedPracticeId = useSession((s) => s.selectedPracticeId)
   const setSelectedPracticeId = useSession((s) => s.setSelectedPracticeId)
 
-  const label = selectedPracticeId
-    ? (practices?.find((p) => p.id === selectedPracticeId)?.name ?? '…')
-    : 'All practices'
+  useEffect(() => {
+    if (!selectedPracticeId && practices && practices.length > 0) {
+      setSelectedPracticeId(practices[0].id)
+    }
+  }, [practices, selectedPracticeId, setSelectedPracticeId])
+
+  const value = selectedPracticeId ? String(selectedPracticeId) : ''
+
+  const handleChange = (v: string) => {
+    setSelectedPracticeId(Number(v))
+    router.push('/')
+  }
 
   return (
-    <Select
-      value={selectedPracticeId ? String(selectedPracticeId) : 'all'}
-      onValueChange={(v) => setSelectedPracticeId(v === 'all' ? null : Number(v))}
-    >
-      <SelectTrigger className="h-8 w-52 text-xs">
-        <span className="truncate">{label}</span>
+    <Select value={value} onValueChange={handleChange}>
+      <SelectTrigger className="h-8 w-52 text-sm font-medium border-0 shadow-none px-0 focus:ring-0">
+        <span className="truncate">
+          {practices?.find((p) => p.id === selectedPracticeId)?.name ?? '…'}
+        </span>
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="all">All practices</SelectItem>
         {practices?.map((p) => (
           <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
         ))}
@@ -41,9 +51,12 @@ export function Header() {
 
   return (
     <header className="flex h-14 items-center justify-between border-b border-border bg-card px-6">
-      <div className="text-sm text-muted-foreground">{practice?.name ?? me?.clinician.practice.name ?? ''}</div>
+      <div className="text-sm text-muted-foreground">
+        {isSuperuser
+          ? <PracticeSelector />
+          : (practice?.name ?? me?.clinician?.practice?.name ?? '')}
+      </div>
       <div className="flex items-center gap-3">
-        {isSuperuser && <PracticeSelector />}
         <span className="text-sm font-medium">{me ? `${me.user.first_name} ${me.user.last_name}` : ''}</span>
         <ThemeToggle />
         <Button variant="ghost" size="sm"

@@ -31,7 +31,7 @@ export function StepLipid({ defaultValues, onNext, onBack }: Props) {
   return (
     <form onSubmit={handleSubmit((d) => onNext(d))} className="space-y-5">
       <div>
-        <Label>Grade — Guillon scale (1–5, optional)</Label>
+        <Label>Grade — Guillon scale (1–5)</Label>
         <div className="mt-2 flex flex-col gap-1.5">
           {GUILLON_LABELS.map((label, i) => {
             const val = i + 1
@@ -57,7 +57,7 @@ export function StepLipid({ defaultValues, onNext, onBack }: Props) {
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="lipid-thick">Thickness (nm, optional)</Label>
+          <Label htmlFor="lipid-thick">Thickness (nm)</Label>
           <Input
             id="lipid-thick"
             type="number"
@@ -71,7 +71,7 @@ export function StepLipid({ defaultValues, onNext, onBack }: Props) {
           )}
         </div>
         <div>
-          <Label htmlFor="lipid-tmh">Tear meniscus (mm, optional)</Label>
+          <Label htmlFor="lipid-tmh">Tear meniscus (mm)</Label>
           <Input
             id="lipid-tmh"
             type="number"
