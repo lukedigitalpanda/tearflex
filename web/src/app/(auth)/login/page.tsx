@@ -19,7 +19,8 @@ export default function LoginPage() {
   }, [])
   const login = useLogin()
   const [showPassword, setShowPassword] = useState(false)
-  const { register, handleSubmit, formState: { errors } } = useForm<LoginInput>({ resolver: zodResolver(loginSchema) })
+  const { register, handleSubmit, watch, formState: { errors } } = useForm<LoginInput>({ resolver: zodResolver(loginSchema) })
+  const values = watch()
 
   const onSubmit = (data: LoginInput) =>
     login.mutate(data, { onSuccess: () => router.push('/') })
@@ -36,13 +37,13 @@ export default function LoginPage() {
         <p className="mb-6 text-sm text-muted-foreground">Sign in to your practice account</p>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <Label htmlFor="username">Username <span className="text-xs text-red-500">* required</span></Label>
+            <Label htmlFor="username">Username {!values.username && <span className="text-xs text-red-500">* required</span>}</Label>
             <Input id="username" {...register('username')} />
             {errors.username && <p className="mt-1 text-xs text-status-severe">{errors.username.message}</p>}
           </div>
           <div>
             <div className="flex items-center justify-between">
-              <Label htmlFor="password">Password <span className="text-xs text-red-500">* required</span></Label>
+              <Label htmlFor="password">Password {!values.password && <span className="text-xs text-red-500">* required</span>}</Label>
               <Link href="/forgot-password" className="text-xs text-teal-600 hover:underline">Forgot password?</Link>
             </div>
             <div className="relative">

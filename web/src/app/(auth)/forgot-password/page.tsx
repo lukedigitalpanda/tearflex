@@ -13,7 +13,7 @@ import { Card } from '@/components/ui/card'
 export default function ForgotPasswordPage() {
   const [submitted, setSubmitted] = useState(false)
   const request = useForgotPassword()
-  const { register, handleSubmit, formState: { errors } } = useForm<ForgotPasswordInput>({
+  const { register, handleSubmit, watch, formState: { errors } } = useForm<ForgotPasswordInput>({
     resolver: zodResolver(forgotPasswordSchema),
   })
 
@@ -39,7 +39,7 @@ export default function ForgotPasswordPage() {
             <p className="mb-6 text-sm text-muted-foreground">Enter your email and we&apos;ll send you a reset link.</p>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div>
-                <Label htmlFor="email">Email address <span className="text-xs text-red-500">* required</span></Label>
+                <Label htmlFor="email">Email address {!watch('email') && <span className="text-xs text-red-500">* required</span>}</Label>
                 <Input id="email" type="email" {...register('email')} />
                 {errors.email && <p className="mt-1 text-xs text-status-severe">{errors.email.message}</p>}
               </div>

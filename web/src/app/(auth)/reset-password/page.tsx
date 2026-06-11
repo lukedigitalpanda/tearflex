@@ -20,7 +20,7 @@ export default function ResetPasswordPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const reset = useResetPassword()
-  const { register, handleSubmit, formState: { errors } } = useForm<ResetPasswordInput>({
+  const { register, handleSubmit, watch, formState: { errors } } = useForm<ResetPasswordInput>({
     resolver: zodResolver(resetPasswordSchema),
   })
 
@@ -47,7 +47,7 @@ export default function ResetPasswordPage() {
         <p className="mb-6 text-sm text-muted-foreground">Choose a new password for your account.</p>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <Label htmlFor="password">New password <span className="text-xs text-red-500">* required</span></Label>
+            <Label htmlFor="password">New password {!watch('password') && <span className="text-xs text-red-500">* required</span>}</Label>
             <div className="relative">
               <Input id="password" type={showPassword ? 'text' : 'password'} className="pr-10" {...register('password')} />
               <button type="button" tabIndex={-1} onClick={() => setShowPassword((v) => !v)}
@@ -63,7 +63,7 @@ export default function ResetPasswordPage() {
             {errors.password && <p className="mt-1 text-xs text-status-severe">{errors.password.message}</p>}
           </div>
           <div>
-            <Label htmlFor="confirm_password">Confirm password <span className="text-xs text-red-500">* required</span></Label>
+            <Label htmlFor="confirm_password">Confirm password {!watch('confirm_password') && <span className="text-xs text-red-500">* required</span>}</Label>
             <div className="relative">
               <Input id="confirm_password" type={showConfirm ? 'text' : 'password'} className="pr-10" {...register('confirm_password')} />
               <button type="button" tabIndex={-1} onClick={() => setShowConfirm((v) => !v)}
