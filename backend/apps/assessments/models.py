@@ -42,7 +42,12 @@ class TestCapture(models.Model):
 
     assessment = models.ForeignKey(Assessment, on_delete=models.CASCADE, related_name='captures')
     test_type = models.CharField(max_length=20, choices=TEST_TYPE_CHOICES)
-    video_file = models.FileField(upload_to='captures/%Y/%m/%d/')
+    source = models.CharField(
+        max_length=10,
+        choices=[('mobile', 'Mobile'), ('manual', 'Manual')],
+        default='mobile',
+    )
+    video_file = models.FileField(upload_to='captures/%Y/%m/%d/', blank=True, null=True)
     thumbnail = models.ImageField(upload_to='thumbnails/%Y/%m/%d/', blank=True)
     duration_seconds = models.FloatField(null=True, blank=True)
     resolution_width = models.IntegerField(null=True, blank=True)
