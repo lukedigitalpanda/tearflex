@@ -55,3 +55,7 @@ export function useDeleteReport() {
 export function downloadReportUrl(id: number) {
   return `/api/download/${id}`
 }
+
+export function viewReportUrl(id: number) {
+  return `/api/download/${id}?inline=1`
+}

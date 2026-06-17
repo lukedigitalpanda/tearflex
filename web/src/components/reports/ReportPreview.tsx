@@ -1,5 +1,5 @@
 'use client'
-import { downloadReportUrl, useRetryReport, useDeleteReport } from '@/hooks/useReports'
+import { downloadReportUrl, viewReportUrl, useRetryReport, useDeleteReport } from '@/hooks/useReports'
 import { useIsAdmin } from '@/hooks/useRole'
 import { Button } from '@/components/ui/button'
 import type { Report } from '@shared/types/api'
@@ -37,6 +37,10 @@ export function ReportPreview({ report }: { report: Report }) {
             {retry.isPending ? 'Retrying…' : 'Retry'}
           </Button>
         )}
+        <Button variant="outline" size="sm" disabled={report.status !== 'ready'}
+          onClick={() => window.open(viewReportUrl(report.id), '_blank')}>
+          View
+        </Button>
         <Button variant="outline" size="sm" disabled={report.status !== 'ready'}
           onClick={() => window.open(downloadReportUrl(report.id), '_blank')}>
           Download

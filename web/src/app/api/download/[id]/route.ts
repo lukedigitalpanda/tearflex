@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server'
 import { fetchWithRefresh, type RefreshTokens } from '@/lib/server/serverFetch'
 import { API_BASE, clearAuthCookies, readAuthCookies, setAuthCookies } from '@/lib/server/cookies'
 
-export async function GET(_req: Request, ctx: { params: { id: string } }) {
+export async function GET(req: Request, ctx: { params: { id: string } }) {
+  // ?inline=1 renders the PDF in the browser; otherwise it downloads as a file.
+  const inline = new URL(req.url).searchParams.get('inline') === '1'
   const { access, refresh } = readAuthCookies()
   const rotation: { tokens: RefreshTokens | null } = { tokens: null }
   const res = await fetchWithRefresh(`${API_BASE}/reports/${ctx.params.id}/download/`, { method: 'GET' }, {
@@ -21,6 +23,7 @@ export async function GET(_req: Request, ctx: { params: { id: string } }) {
   headers.set('content-type', res.headers.get('content-type') ?? 'application/pdf')
   const contentLength = res.headers.get('content-length')
   if (contentLength) headers.set('content-length', contentLength)
-  headers.set('content-disposition', `attachment; filename="tearflex_report_${ctx.params.id}.pdf"`)
+  const disposition = inline ? 'inline' : 'attachment'
+  headers.set('content-disposition', `${disposition}; filename="tearflex_report_${ctx.params.id}.pdf"`)
   return new NextResponse(res.body, { status: res.status, headers })
 }
