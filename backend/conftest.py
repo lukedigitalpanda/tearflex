@@ -72,3 +72,10 @@ def api(clinician):
     client = APIClient()
     client.force_authenticate(user=clinician.user)
     return client
+
+
+@pytest.fixture(autouse=True)
+def _isolate_media(tmp_path, settings):
+    """Point file storage at a per-test temp dir so tests never read or write
+    the real media volume (e.g. when run inside the backend container)."""
+    settings.MEDIA_ROOT = str(tmp_path / 'media')

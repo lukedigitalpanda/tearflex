@@ -2,6 +2,7 @@ import base64
 import logging
 from django.template.loader import render_to_string
 from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 from weasyprint import HTML
 
 logger = logging.getLogger(__name__)
@@ -48,6 +49,10 @@ def generate_assessment_report(report) -> 'Report':
     and saves to the report's pdf_file field.
     """
     assessment = report.assessment
+    # Keep any existing PDF until the new one is safely stored, then remove it.
+    # (We never blank pdf_file before this point, so a failed/in-flight
+    # regeneration still leaves the previous report downloadable.)
+    old_file_name = report.pdf_file.name or None
     try:
         practice = assessment.clinician.practice if assessment.clinician else None
         normal_t = getattr(practice, 'nibut_normal_threshold', None) or 10
@@ -95,6 +100,9 @@ def generate_assessment_report(report) -> 'Report':
         report.pdf_file.save(filename, ContentFile(pdf_bytes), save=False)
         report.status = 'ready'
         report.save(update_fields=['pdf_file', 'status'])
+        # New PDF is stored; drop the superseded one so files don't accumulate.
+        if old_file_name and old_file_name != report.pdf_file.name:
+            default_storage.delete(old_file_name)
     except Exception:
         # Re-raise so the Celery task can apply its retry/attempt-cap policy.
         # The caller is responsible for marking the report 'failed'.

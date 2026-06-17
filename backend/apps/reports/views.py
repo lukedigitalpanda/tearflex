@@ -69,13 +69,15 @@ class GenerateReportView(generics.GenericAPIView):
             defaults={'generated_by': request.user.clinician, 'status': 'pending'},
         )
         if not created:
-            if report.pdf_file:
-                report.pdf_file.delete(save=False)
-            report.pdf_file = ''
+            # A generation is already in flight — don't queue a duplicate.
+            if report.status == 'pending':
+                return Response(ReportSerializer(report).data, status=status.HTTP_202_ACCEPTED)
+            # Re-queue, but keep the existing pdf_file so the current report stays
+            # downloadable until the new one is ready (the worker swaps it on success).
             report.generated_by = request.user.clinician
             report.status = 'pending'
             report.generation_attempts = 0
-            report.save(update_fields=['pdf_file', 'generated_by', 'status', 'generation_attempts'])
+            report.save(update_fields=['generated_by', 'status', 'generation_attempts'])
 
         generate_report_task.delay(report_id=report.pk)
 
