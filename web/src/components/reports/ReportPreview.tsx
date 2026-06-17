@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
-import { downloadReportUrl, reportViewUrl, useRetryReport, useDeleteReport } from '@/hooks/useReports'
+import Link from 'next/link'
+import { downloadReportUrl, useRetryReport, useDeleteReport } from '@/hooks/useReports'
 import { useIsAdmin } from '@/hooks/useRole'
 import { Button } from '@/components/ui/button'
 import {
@@ -19,29 +20,10 @@ export function ReportPreview({ report }: { report: Report }) {
   const retry = useRetryReport()
   const del = useDeleteReport()
   const [confirmOpen, setConfirmOpen] = useState(false)
-  const [viewOpen, setViewOpen] = useState(false)
   const unfinished = report.status !== 'ready'
 
   const eye = report.eye === 'left' ? 'Left' : 'Right'
   const when = new Date(report.assessed_at).toLocaleDateString('en-GB')
-
-  // Scale the report (same-origin iframe) down so the whole thing fits the
-  // modal without scrolling. Falls back to normal scrolling if unsupported.
-  const fitReportToFrame = (e: React.SyntheticEvent<HTMLIFrameElement>) => {
-    const frame = e.currentTarget
-    try {
-      const doc = frame.contentDocument
-      if (!doc?.body) return
-      doc.body.style.zoom = '1'
-      const contentH = doc.body.scrollHeight
-      const availH = frame.clientHeight - 8 // small slack so no stray scrollbar
-      if (contentH > availH) {
-        ;(doc.body.style as unknown as { zoom: string }).zoom = String(Math.max(0.5, availH / contentH))
-      }
-    } catch {
-      /* cross-origin or unsupported — leave scrollable */
-    }
-  }
 
   return (
     <div className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3">
@@ -62,35 +44,13 @@ export function ReportPreview({ report }: { report: Report }) {
             {retry.isPending ? 'Retrying…' : 'Retry'}
           </Button>
         )}
-        <Dialog open={viewOpen} onOpenChange={setViewOpen}>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="sm" disabled={report.status !== 'ready'}>View</Button>
-          </DialogTrigger>
-          <DialogContent className="flex h-[92vh] max-w-5xl flex-col gap-3 p-4">
-            <DialogHeader className="space-y-0">
-              <DialogTitle className="text-base">{eye} Eye · {when}</DialogTitle>
-              <DialogDescription className="sr-only">Report preview</DialogDescription>
-            </DialogHeader>
-            {viewOpen && (
-              <iframe
-                src={reportViewUrl(report.id)}
-                title={`${eye} Eye report from ${when}`}
-                className="min-h-0 w-full flex-1 rounded-md border border-border bg-muted"
-                onLoad={fitReportToFrame}
-              />
-            )}
-            <DialogFooter className="sm:justify-between">
-              <a href={reportViewUrl(report.id)} target="_blank" rel="noreferrer"
-                className="text-sm font-medium text-teal-700 hover:underline dark:text-teal-400">
-                Open in new tab
-              </a>
-              <Button variant="outline" size="sm"
-                onClick={() => window.open(downloadReportUrl(report.id), '_blank')}>
-                Download
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {report.status === 'ready' ? (
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/patients/${report.patient}/reports/${report.id}`}>View</Link>
+          </Button>
+        ) : (
+          <Button variant="outline" size="sm" disabled>View</Button>
+        )}
         <Button variant="outline" size="sm" disabled={report.status !== 'ready'}
           onClick={() => window.open(downloadReportUrl(report.id), '_blank')}>
           Download
