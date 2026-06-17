@@ -22,6 +22,8 @@ export interface Report {
   created_at: string
   // Completion time, only present for superadmin / practice-admin accounts.
   completed_at?: string | null
+  // Soft-delete timestamp, only present for superadmin / practice-admin accounts.
+  deleted_at?: string | null
 }
 
 export interface ClinicianInviteResult {

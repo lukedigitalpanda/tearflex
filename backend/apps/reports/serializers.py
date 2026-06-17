@@ -17,19 +17,22 @@ class ReportSerializer(serializers.ModelSerializer):
         # PDFs are served via /api/download/{id} instead.
         fields = [
             'id', 'assessment', 'patient', 'eye', 'assessed_at',
-            'generated_by', 'status', 'generation_attempts', 'created_at', 'completed_at',
+            'generated_by', 'status', 'generation_attempts', 'created_at',
+            'completed_at', 'deleted_at',
         ]
         read_only_fields = [
             'id', 'patient', 'eye', 'assessed_at',
-            'generated_by', 'status', 'generation_attempts', 'created_at', 'completed_at',
+            'generated_by', 'status', 'generation_attempts', 'created_at',
+            'completed_at', 'deleted_at',
         ]
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        # completed_at is an admin-only detail; hide it from ordinary clinicians.
+        # completed_at / deleted_at are admin-only details; hide from clinicians.
         request = self.context.get('request')
         if not user_is_report_admin(getattr(request, 'user', None)):
             data.pop('completed_at', None)
+            data.pop('deleted_at', None)
         return data
 
 

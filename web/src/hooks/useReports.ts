@@ -52,6 +52,22 @@ export function useDeleteReport() {
   })
 }
 
+// Soft-deleted (recoverable) reports for a patient — admin-only on the backend.
+export function useDeletedReports(patientId: number) {
+  return useQuery({
+    queryKey: ['reports', 'deleted', patientId],
+    queryFn: () => api.get<Paginated<Report>>(`reports/?patient=${patientId}&deleted=true`),
+  })
+}
+
+export function useRestoreReport() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => api.post<Report>(`reports/${id}/restore/`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['reports'], exact: false }),
+  })
+}
+
 export function downloadReportUrl(id: number) {
   return `/api/download/${id}`
 }

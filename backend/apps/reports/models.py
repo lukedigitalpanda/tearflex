@@ -14,6 +14,9 @@ class Report(models.Model):
     # still force a manual retry, which resets the counter).
     MAX_GENERATION_ATTEMPTS = 3
 
+    # Soft-deleted reports are recoverable for this many days, then purged.
+    RETENTION_DAYS = 30
+
     # One report per assessment: regenerating reuses this row, so failed/stale
     # attempts never pile up. Re-running a test creates a new Assessment, which
     # therefore gets its own report.
@@ -30,6 +33,8 @@ class Report(models.Model):
     # When PDF generation actually finished (status -> ready). Distinct from
     # created_at, which is when generation was first queued.
     completed_at = models.DateTimeField(null=True, blank=True)
+    # Set when soft-deleted; the report is hidden but recoverable until purged.
+    deleted_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ['-created_at']
