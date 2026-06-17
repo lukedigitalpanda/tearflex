@@ -19,6 +19,7 @@ export function ReportPreview({ report }: { report: Report }) {
   const retry = useRetryReport()
   const del = useDeleteReport()
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [viewOpen, setViewOpen] = useState(false)
   const unfinished = report.status !== 'ready'
 
   const eye = report.eye === 'left' ? 'Left' : 'Right'
@@ -43,10 +44,34 @@ export function ReportPreview({ report }: { report: Report }) {
             {retry.isPending ? 'Retrying…' : 'Retry'}
           </Button>
         )}
-        <Button variant="outline" size="sm" disabled={report.status !== 'ready'}
-          onClick={() => window.open(viewReportUrl(report.id), '_blank')}>
-          View
-        </Button>
+        <Dialog open={viewOpen} onOpenChange={setViewOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm" disabled={report.status !== 'ready'}>View</Button>
+          </DialogTrigger>
+          <DialogContent className="flex h-[88vh] max-w-5xl flex-col">
+            <DialogHeader>
+              <DialogTitle>{eye} Eye · {when}</DialogTitle>
+              <DialogDescription className="sr-only">Report preview</DialogDescription>
+            </DialogHeader>
+            {viewOpen && (
+              <iframe
+                src={viewReportUrl(report.id)}
+                title={`${eye} Eye report from ${when}`}
+                className="min-h-0 w-full flex-1 rounded-md border border-border bg-muted"
+              />
+            )}
+            <DialogFooter className="sm:justify-between">
+              <a href={viewReportUrl(report.id)} target="_blank" rel="noreferrer"
+                className="text-sm font-medium text-teal-700 hover:underline dark:text-teal-400">
+                Open in new tab
+              </a>
+              <Button variant="outline" size="sm"
+                onClick={() => window.open(downloadReportUrl(report.id), '_blank')}>
+                Download
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         <Button variant="outline" size="sm" disabled={report.status !== 'ready'}
           onClick={() => window.open(downloadReportUrl(report.id), '_blank')}>
           Download
