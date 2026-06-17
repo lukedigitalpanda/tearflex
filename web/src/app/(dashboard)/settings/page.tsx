@@ -51,7 +51,7 @@ export default function SettingsPage() {
             <span className="font-semibold">Recently deleted</span>
             <p className="text-xs text-muted-foreground">Recover deleted reports within 30 days.</p>
           </div>
-          <Link href="/settings/deleted-reports" className="text-sm font-medium text-teal-700 dark:text-teal-400">Recover →</Link>
+          <Link href="/settings/deleted-reports" className="text-sm font-medium text-teal-700 dark:text-teal-400">Manage →</Link>
         </Card>
       )}
     </div>
