@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { useAssessment } from '@/hooks/useAssessments'
 import { usePractice } from '@/hooks/usePractice'
-import { useReports } from '@/hooks/useReports'
+import { useReports, downloadReportUrl } from '@/hooks/useReports'
 import { ResultsDisplay } from '@/components/assessments/ResultsDisplay'
 import { GenerateReportButton } from '@/components/reports/GenerateReportButton'
 import { CompareButton } from '@/components/reports/CompareButton'
@@ -21,10 +21,9 @@ export default function AssessmentDetailPage({ params }: { params: { assessmentI
     normal: practice?.nibut_normal_threshold ?? 10,
     borderline: practice?.nibut_borderline_threshold ?? 5,
   }
-  // This assessment's report, if one has been generated — enables Compare.
-  const report = (reportsData?.results ?? []).find(
-    (r) => r.assessment === assessment.id && r.status === 'ready',
-  )
+  // This assessment's report (any status). Reports auto-generate on completion,
+  // so normally one exists; older/failed ones can still be generated manually.
+  const report = (reportsData?.results ?? []).find((r) => r.assessment === assessment.id)
 
   return (
     <div className="space-y-6">
@@ -37,8 +36,19 @@ export default function AssessmentDetailPage({ params }: { params: { assessmentI
           <p className="text-sm text-muted-foreground">{assessment.eye} eye · {new Date(assessment.assessed_at).toLocaleString('en-GB')}</p>
         </div>
         <div className="flex items-center gap-2">
-          {report && <CompareButton patientId={assessment.patient} reportId={report.id} eye={assessment.eye} />}
-          <GenerateReportButton assessmentId={assessment.id} />
+          {report?.status === 'ready' && (
+            <CompareButton patientId={assessment.patient} reportId={report.id} eye={assessment.eye} />
+          )}
+          {report?.status === 'ready' ? (
+            <Button variant="outline"
+              onClick={() => window.open(downloadReportUrl(report.id), '_blank')}>
+              Download PDF
+            </Button>
+          ) : report?.status === 'pending' ? (
+            <Button variant="outline" disabled>Generating…</Button>
+          ) : (
+            <GenerateReportButton assessmentId={assessment.id} />
+          )}
         </div>
       </div>
 

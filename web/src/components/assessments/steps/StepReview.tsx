@@ -67,10 +67,14 @@ export function StepReview({ patientId, stepData, onBack }: Props) {
       }
       await Promise.all(captureJobs)
       await api.patch(`assessments/${assessment.id}/`, { status: 'complete' })
+      // Auto-generate the report so a completed assessment always has one
+      // (best-effort: don't block navigation if it fails — it can be retried).
+      api.post('reports/generate/', { assessment: assessment.id }).catch(() => {})
       router.push(`/patients/${patientId}/assessments/${assessment.id}`)
     } catch {
       if (savedAssessmentId !== null) {
         // captures saved, status patch failed — navigate anyway
+        api.post('reports/generate/', { assessment: savedAssessmentId }).catch(() => {})
         router.push(`/patients/${patientId}/assessments/${savedAssessmentId}`)
         return
       }
@@ -83,29 +87,61 @@ export function StepReview({ patientId, stepData, onBack }: Props) {
   const nibut = stepData.nibut
   const band = nibutBand(nibut.nibut_first_breakup_seconds, thresholds)
 
+  const OXFORD = ['Absent', 'Minimal', 'Mild', 'Moderate', 'Marked', 'Severe']
+  const GUILLON = ['Open meshwork (~15nm)', 'Closed meshwork (~30nm)', 'Wave / flow (~60nm)', 'Amorphous (~80nm)', 'Coloured fringes (>90nm)']
+
+  const fluor = stepData.fluorescein
+  const lipid = stepData.lipid
+
   return (
     <div className="space-y-5">
       <Card className="divide-y divide-border p-0 overflow-hidden">
+
+        <SectionHeader label="General" />
         <Row label="Eye" value={<span className="capitalize">{stepData.eye.eye} eye</span>} />
+
+        <SectionHeader label="NIBUT" />
         <Row
-          label="NIBUT — first break-up"
+          label="First break-up"
           value={<span className="tabular-nums font-medium" style={{ color: band.color }}>{nibut.nibut_first_breakup_seconds}s — {band.label}</span>}
         />
-        {nibut.nibut_mean_breakup_seconds != null && (
-          <Row label="NIBUT — mean" value={<span className="tabular-nums">{nibut.nibut_mean_breakup_seconds}s</span>} />
-        )}
-        <Row
-          label="Fluorescein grade"
-          value={stepData.fluorescein?.fluorescein_grade != null
-            ? <span>{stepData.fluorescein.fluorescein_grade}</span>
-            : <Skipped />}
-        />
-        <Row
-          label="Lipid grade"
-          value={stepData.lipid?.lipid_grade != null
-            ? <span>{stepData.lipid.lipid_grade}</span>
-            : <Skipped />}
-        />
+        {nibut.nibut_mean_breakup_seconds != null
+          ? <Row label="Mean break-up" value={<span className="tabular-nums">{nibut.nibut_mean_breakup_seconds}s</span>} />
+          : <Row label="Mean break-up" value={<NotEntered />} />}
+
+        <SectionHeader label="Fluorescein" />
+        {fluor
+          ? <>
+              <Row
+                label="Grade (Oxford)"
+                value={fluor.fluorescein_grade != null
+                  ? <span>{fluor.fluorescein_grade} — {OXFORD[fluor.fluorescein_grade]}</span>
+                  : <NotEntered />}
+              />
+              {fluor.fluorescein_breakup_seconds != null
+                ? <Row label="Break-up time" value={<span className="tabular-nums">{fluor.fluorescein_breakup_seconds}s</span>} />
+                : <Row label="Break-up time" value={<NotEntered />} />}
+            </>
+          : <Row label="Fluorescein" value={<Skipped />} />}
+
+        <SectionHeader label="Lipid layer" />
+        {lipid
+          ? <>
+              <Row
+                label="Grade (Guillon)"
+                value={lipid.lipid_grade != null
+                  ? <span>{lipid.lipid_grade} — {GUILLON[lipid.lipid_grade - 1]}</span>
+                  : <NotEntered />}
+              />
+              {lipid.lipid_thickness_nm != null
+                ? <Row label="Thickness" value={<span className="tabular-nums">{lipid.lipid_thickness_nm}nm</span>} />
+                : <Row label="Thickness" value={<NotEntered />} />}
+              {lipid.tear_meniscus_height_mm != null
+                ? <Row label="Tear meniscus" value={<span className="tabular-nums">{lipid.tear_meniscus_height_mm}mm</span>} />
+                : <Row label="Tear meniscus" value={<NotEntered />} />}
+            </>
+          : <Row label="Lipid layer" value={<Skipped />} />}
+
       </Card>
       {error && <p className="text-sm text-red-500">{error}</p>}
       <div className="flex gap-3 pt-2">
@@ -120,6 +156,14 @@ export function StepReview({ patientId, stepData, onBack }: Props) {
   )
 }
 
+function SectionHeader({ label }: { label: string }) {
+  return (
+    <div className="bg-muted/50 px-5 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      {label}
+    </div>
+  )
+}
+
 function Row({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex items-center justify-between px-5 py-3 text-sm">
@@ -130,5 +174,9 @@ function Row({ label, value }: { label: string; value: ReactNode }) {
 }
 
 function Skipped() {
-  return <span className="text-xs text-muted-foreground">Skipped</span>
+  return <span className="text-xs text-muted-foreground italic">Skipped</span>
+}
+
+function NotEntered() {
+  return <span className="text-xs text-muted-foreground">—</span>
 }

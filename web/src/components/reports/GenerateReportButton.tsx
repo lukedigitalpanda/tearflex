@@ -10,7 +10,7 @@ export function GenerateReportButton({ assessmentId }: { assessmentId: number })
         onSuccess: (report) => { if (report.status === 'ready') window.open(downloadReportUrl(report.id), '_blank') },
       })}
       disabled={generate.isPending}>
-      {generate.isPending ? 'Generating…' : 'PDF report'}
+      {generate.isPending ? 'Generating…' : 'Generate report'}
     </Button>
   )
 }
