@@ -1,22 +1,33 @@
 'use client'
+import { useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { reportViewUrl, downloadReportUrl } from '@/hooks/useReports'
 import { Button } from '@/components/ui/button'
 
 export default function ReportViewPage({ params }: { params: { id: string; reportId: string } }) {
   const reportId = Number(params.reportId)
+  const frameRef = useRef<HTMLIFrameElement>(null)
 
-  // Grow the (same-origin) iframe to its content height so the report shows at
-  // full size and the page scrolls normally, like every other screen.
-  const sizeToContent = (e: React.SyntheticEvent<HTMLIFrameElement>) => {
-    const frame = e.currentTarget
-    try {
-      const doc = frame.contentDocument
-      if (doc) frame.style.height = `${doc.documentElement.scrollHeight}px`
-    } catch {
-      /* leave default height */
+  // Grow the (same-origin) iframe to its content height so the report shows in
+  // full and only the page scrolls — no nested scrollbar. onLoad alone is
+  // unreliable for src-loaded iframes, so poll briefly until it's measurable.
+  useEffect(() => {
+    const fit = () => {
+      const frame = frameRef.current
+      if (!frame) return
+      try {
+        const doc = frame.contentDocument
+        const h = doc?.documentElement.scrollHeight ?? 0
+        if (h > 0) frame.style.height = `${h + 4}px`
+      } catch {
+        /* leave default height */
+      }
     }
-  }
+    fit()
+    const interval = setInterval(fit, 250)
+    const stop = setTimeout(() => clearInterval(interval), 3000)
+    return () => { clearInterval(interval); clearTimeout(stop) }
+  }, [reportId])
 
   return (
     <div className="space-y-4">
@@ -36,11 +47,12 @@ export default function ReportViewPage({ params }: { params: { id: string; repor
         </div>
       </div>
       <iframe
+        ref={frameRef}
         src={reportViewUrl(reportId)}
         title="Report"
-        onLoad={sizeToContent}
-        className="w-full rounded-md border border-border bg-muted"
-        style={{ minHeight: '70vh' }}
+        scrolling="no"
+        className="block w-full overflow-hidden rounded-md border border-border bg-muted"
+        style={{ height: '70vh' }}
       />
     </div>
   )
