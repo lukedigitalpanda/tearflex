@@ -3,6 +3,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { downloadReportUrl, useRetryReport, useDeleteReport } from '@/hooks/useReports'
 import { useIsAdmin } from '@/hooks/useRole'
+import { CompareButton } from '@/components/reports/CompareButton'
 import { Button } from '@/components/ui/button'
 import {
   Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -50,6 +51,9 @@ export function ReportPreview({ report }: { report: Report }) {
           </Button>
         ) : (
           <Button variant="outline" size="sm" disabled>View</Button>
+        )}
+        {report.status === 'ready' && (
+          <CompareButton patientId={report.patient} reportId={report.id} eye={report.eye} />
         )}
         <Button variant="outline" size="sm" disabled={report.status !== 'ready'}
           onClick={() => window.open(downloadReportUrl(report.id), '_blank')}>
