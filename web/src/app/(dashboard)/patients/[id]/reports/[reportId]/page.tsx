@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTheme } from 'next-themes'
 import Link from 'next/link'
 import { reportViewUrl, downloadReportUrl } from '@/hooks/useReports'
@@ -10,27 +10,35 @@ export default function ReportViewPage({ params }: { params: { id: string; repor
   const { resolvedTheme } = useTheme()
   const dark = resolvedTheme === 'dark'
   const frameRef = useRef<HTMLIFrameElement>(null)
+  const [ready, setReady] = useState(false)
 
-  // Grow the (same-origin) iframe to its content height so the report shows in
-  // full and only the page scrolls — no nested scrollbar. onLoad alone is
-  // unreliable for src-loaded iframes, so poll briefly until it's measurable.
+  // The report renders in a same-origin iframe. Apply the current theme by
+  // toggling its `dark` class directly (so switching the app theme recolours
+  // the report instantly, with no reload) and size it to its content so the
+  // page — not the iframe — scrolls. Re-runs whenever the theme changes.
   useEffect(() => {
-    const fit = () => {
-      const frame = frameRef.current
-      if (!frame) return
+    const frame = frameRef.current
+    if (!frame) return
+    const apply = () => {
       try {
         const doc = frame.contentDocument
-        const h = doc?.documentElement.scrollHeight ?? 0
-        if (h > 0) frame.style.height = `${h + 4}px`
+        if (!doc?.documentElement) return
+        doc.documentElement.classList.toggle('dark', resolvedTheme === 'dark')
+        const h = doc.documentElement.scrollHeight
+        if (h > 0 && resolvedTheme) {
+          frame.style.height = `${h + 4}px`
+          setReady(true)
+        }
       } catch {
-        /* leave default height */
+        /* cross-origin / unsupported — leave as-is */
       }
     }
-    fit()
-    const interval = setInterval(fit, 250)
-    const stop = setTimeout(() => clearInterval(interval), 3000)
-    return () => { clearInterval(interval); clearTimeout(stop) }
-  }, [reportId, dark])
+    apply()
+    frame.addEventListener('load', apply)
+    const interval = setInterval(apply, 250)
+    const stop = setTimeout(() => { clearInterval(interval); setReady(true) }, 3000)
+    return () => { frame.removeEventListener('load', apply); clearInterval(interval); clearTimeout(stop) }
+  }, [resolvedTheme])
 
   return (
     <div className="space-y-4">
@@ -51,11 +59,11 @@ export default function ReportViewPage({ params }: { params: { id: string; repor
       </div>
       <iframe
         ref={frameRef}
-        src={reportViewUrl(reportId, dark)}
+        src={reportViewUrl(reportId)}
         title="Report"
         scrolling="no"
-        className="block w-full overflow-hidden rounded-md border border-border"
-        style={{ height: '70vh' }}
+        className="block w-full overflow-hidden rounded-md border border-border transition-opacity"
+        style={{ height: '70vh', opacity: ready ? 1 : 0 }}
       />
     </div>
   )
