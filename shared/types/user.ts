@@ -1,4 +1,4 @@
-export type ClinicianRole = 'admin' | 'clinician' | 'technician'
+export type ClinicianRole = 'chain_admin' | 'admin' | 'clinician' | 'technician'
 
 export interface Practice {
   id: number

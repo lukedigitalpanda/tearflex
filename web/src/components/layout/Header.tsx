@@ -6,6 +6,7 @@ import { usePractice, usePractices } from '@/hooks/usePractice'
 import { useSession } from '@/store/session'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select'
+import { canSwitchPractice } from '@/hooks/useRole'
 import { ThemeToggle } from './ThemeToggle'
 
 function PracticeSelector() {
@@ -47,12 +48,13 @@ export function Header() {
   const { data: me } = useMe()
   const { data: practice } = usePractice()
   const logout = useLogout()
-  const isSuperuser = me?.user.is_superuser
+  // Superusers and chain admins can switch practices (chain admins within their chain).
+  const canSwitch = canSwitchPractice(me)
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-card px-6">
       <div className="text-sm text-muted-foreground">
-        {isSuperuser
+        {canSwitch
           ? <PracticeSelector />
           : (practice?.name ?? me?.clinician?.practice?.name ?? '')}
       </div>
