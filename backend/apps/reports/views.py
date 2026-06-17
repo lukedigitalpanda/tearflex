@@ -5,6 +5,7 @@ from django.utils import timezone
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 
+from apps.accounts.scoping import scope_queryset
 from apps.assessments.models import Assessment
 from .access import user_is_report_admin
 from .generators import render_report_html
@@ -21,9 +22,10 @@ class PracticeScopedReportMixin:
 
     def base_queryset(self):
         """Practice/role/patient-scoped reports, ignoring soft-delete state."""
-        qs = Report.objects.select_related('assessment', 'generated_by')
-        if not self.request.user.is_superuser:
-            qs = qs.filter(assessment__patient__practice=self.request.user.clinician.practice)
+        qs = scope_queryset(
+            Report.objects.select_related('assessment', 'generated_by'),
+            self.request.user, 'assessment__patient__practice',
+        )
         if not user_is_report_admin(self.request.user):
             qs = qs.filter(status='ready')
         patient = self.request.query_params.get('patient')
@@ -60,13 +62,9 @@ class GenerateReportView(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
         assessment_pk = serializer.validated_data['assessment']
 
-        if request.user.is_superuser:
-            assessment = Assessment.objects.filter(pk=assessment_pk).first()
-        else:
-            assessment = Assessment.objects.filter(
-                pk=assessment_pk,
-                patient__practice=request.user.clinician.practice,
-            ).first()
+        assessment = scope_queryset(
+            Assessment.objects.all(), request.user, 'patient__practice',
+        ).filter(pk=assessment_pk).first()
 
         if not assessment:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)

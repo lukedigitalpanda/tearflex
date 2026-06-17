@@ -3,9 +3,16 @@ import pytest
 from django.contrib.auth.models import User
 from rest_framework.test import APIClient
 
-from apps.accounts.models import Clinician, Practice
+from apps.accounts.models import Chain, Clinician, Practice
 from apps.patients.models import Patient
 from apps.assessments.models import Assessment
+
+
+class ChainFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Chain
+
+    name = factory.Sequence(lambda n: f'Chain {n}')
 
 
 class PracticeFactory(factory.django.DjangoModelFactory):

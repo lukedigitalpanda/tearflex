@@ -8,4 +8,4 @@ def user_is_report_admin(user) -> bool:
     if user.is_superuser:
         return True
     clinician = getattr(user, 'clinician', None)
-    return bool(clinician and clinician.role == 'admin')
+    return bool(clinician and clinician.role in ('admin', 'chain_admin'))

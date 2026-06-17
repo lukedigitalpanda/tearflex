@@ -4,6 +4,7 @@ from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
+from apps.accounts.scoping import accessible_practice_ids, scope_queryset
 from .models import Assessment, TestCapture, TestResult
 from .serializers import (
     AssessmentSerializer, AssessmentListSerializer,
@@ -13,17 +14,21 @@ from .serializers import (
 from .tasks import process_capture
 
 
+def _require_assessment_access(user, assessment):
+    """Raise PermissionDenied unless the user may access this assessment's practice."""
+    allowed = accessible_practice_ids(user)
+    if allowed is not None and assessment.patient.practice_id not in allowed:
+        raise PermissionDenied()
+
+
 class PracticeScopedMixin:
-    """Scope queryset to the user's practice; superusers see all practices.
-    Superusers may pass ?practice_id=X to filter to a specific practice."""
+    """Scope queryset to the practices the user may access (own practice, their
+    chain, or all for superusers); ?practice_id=X honoured only if within it."""
     def get_queryset(self):
-        qs = super().get_queryset()
-        if self.request.user.is_superuser:
-            practice_id = self.request.query_params.get('practice_id')
-            if practice_id:
-                return qs.filter(patient__practice_id=practice_id)
-            return qs
-        return qs.filter(patient__practice=self.request.user.clinician.practice)
+        return scope_queryset(
+            super().get_queryset(), self.request.user, 'patient__practice',
+            self.request.query_params.get('practice_id'),
+        )
 
 
 class AssessmentListCreateView(PracticeScopedMixin, generics.ListCreateAPIView):
@@ -51,15 +56,7 @@ class CaptureUploadView(generics.CreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
-        user = self.request.user
-        if not user.is_superuser:
-            try:
-                practice = user.clinician.practice
-            except (AttributeError, ObjectDoesNotExist):
-                raise PermissionDenied()
-            assessment = serializer.validated_data['assessment']
-            if assessment.patient.practice_id != practice.id:
-                raise PermissionDenied()
+        _require_assessment_access(self.request.user, serializer.validated_data['assessment'])
         capture = serializer.save()
         task = process_capture.delay(capture.id)
         capture.celery_task_id = task.id
@@ -72,13 +69,9 @@ class CaptureDetailView(generics.RetrieveAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        if self.request.user.is_superuser:
-            return TestCapture.objects.all()
-        try:
-            practice = self.request.user.clinician.practice
-        except (AttributeError, ObjectDoesNotExist):
-            raise PermissionDenied()
-        return TestCapture.objects.filter(assessment__patient__practice=practice)
+        return scope_queryset(
+            TestCapture.objects.all(), self.request.user, 'assessment__patient__practice',
+        )
 
 
 class ManualCaptureCreateView(generics.GenericAPIView):
@@ -93,15 +86,8 @@ class ManualCaptureCreateView(generics.GenericAPIView):
         data = serializer.validated_data
         assessment = data['assessment']
 
-        if not user.is_superuser:
-            try:
-                practice = user.clinician.practice
-            except (AttributeError, ObjectDoesNotExist):
-                raise PermissionDenied()
-            if assessment.patient.practice_id != practice.id:
-                raise PermissionDenied()
-        else:
-            practice = assessment.patient.practice
+        _require_assessment_access(user, assessment)
+        practice = assessment.patient.practice
 
         with transaction.atomic():
             capture = TestCapture.objects.create(
@@ -143,7 +129,7 @@ class ManualCaptureCreateView(generics.GenericAPIView):
 @permission_classes([permissions.IsAuthenticated])
 def capture_status(request, pk):
     """Poll the analysis status of a capture."""
-    qs = TestCapture.objects.all() if request.user.is_superuser else TestCapture.objects.filter(assessment__patient__practice=request.user.clinician.practice)
+    qs = scope_queryset(TestCapture.objects.all(), request.user, 'assessment__patient__practice')
     try:
         capture = qs.get(pk=pk)
     except TestCapture.DoesNotExist:

@@ -1,10 +1,16 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, permissions, status
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import Practice, Clinician
-from .serializers import MeSerializer, PracticeSerializer, ClinicianSerializer, ClinicianInviteSerializer, ClinicianRegisterSerializer
+from .scoping import accessible_practice_ids, resolve_practice_scope, scope_queryset
+from .serializers import (
+    MeSerializer, PracticeSerializer, ClinicianSerializer,
+    ClinicianInviteSerializer, ClinicianRegisterSerializer,
+    PasswordResetRequestSerializer, PasswordResetConfirmSerializer,
+)
 from .permissions import IsPracticeAdmin
 
 
@@ -46,13 +52,18 @@ class MeView(APIView):
 
 
 class PracticeListView(generics.ListAPIView):
-    """List all practices — superadmin only. Pagination disabled (dropdown use)."""
+    """List the practices the user may switch between (all for superadmins, the
+    chain's practices for chain admins). Pagination disabled (dropdown use)."""
     serializer_class = PracticeSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated]
     pagination_class = None
 
     def get_queryset(self):
-        return Practice.objects.filter(is_active=True).order_by('name')
+        qs = Practice.objects.filter(is_active=True).order_by('name')
+        scope = accessible_practice_ids(self.request.user)
+        if scope is None:
+            return qs
+        return qs.filter(id__in=scope)
 
 
 class PracticeView(generics.RetrieveUpdateAPIView):
@@ -61,10 +72,11 @@ class PracticeView(generics.RetrieveUpdateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self):
-        if self.request.user.is_superuser:
-            practice_id = self.request.query_params.get('practice_id')
-            if practice_id:
+        practice_id = self.request.query_params.get('practice_id')
+        if practice_id:
+            if resolve_practice_scope(self.request.user, practice_id):
                 return get_object_or_404(Practice, pk=practice_id)
+            raise PermissionDenied()
         return self.request.user.clinician.practice
 
 
@@ -76,12 +88,10 @@ class PracticeClinicianListView(generics.ListAPIView):
 
     def get_queryset(self):
         base = Clinician.objects.select_related('user', 'practice').filter(user__is_superuser=False)
-        if self.request.user.is_superuser:
-            practice_id = self.request.query_params.get('practice_id')
-            if practice_id:
-                return base.filter(practice_id=practice_id)
-            return base
-        return base.filter(practice=self.request.user.clinician.practice)
+        return scope_queryset(
+            base, self.request.user, 'practice',
+            self.request.query_params.get('practice_id'),
+        )
 
 
 class ClinicianInviteView(generics.GenericAPIView):
@@ -107,3 +117,27 @@ class ClinicianInviteView(generics.GenericAPIView):
             },
             status=status.HTTP_201_CREATED,
         )
+
+
+class PasswordResetRequestView(generics.GenericAPIView):
+    """Request a password reset email. Always returns 200 to prevent email enumeration."""
+    permission_classes = [permissions.AllowAny]
+    serializer_class = PasswordResetRequestSerializer
+
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({'detail': 'If an account with that email exists, a reset link has been sent.'})
+
+
+class PasswordResetConfirmView(generics.GenericAPIView):
+    """Confirm a password reset using a token."""
+    permission_classes = [permissions.AllowAny]
+    serializer_class = PasswordResetConfirmSerializer
+
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({'detail': 'Password reset successfully.'})

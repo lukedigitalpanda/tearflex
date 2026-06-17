@@ -2,21 +2,20 @@ from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
+from apps.accounts.scoping import scope_queryset
 from .models import Patient
 from .serializers import PatientSerializer, PatientListSerializer
 
 
 class PracticeScopedMixin:
-    """Scope queryset to the user's practice; superusers see all practices.
-    Superusers may pass ?practice_id=X to filter to a specific practice."""
+    """Scope queryset to the practices the user may access (own practice, their
+    chain, or all for superusers). A ?practice_id=X selector is honoured only if
+    it falls within that accessible set."""
     def get_queryset(self):
-        qs = super().get_queryset()
-        if self.request.user.is_superuser:
-            practice_id = self.request.query_params.get('practice_id')
-            if practice_id:
-                return qs.filter(practice_id=practice_id)
-            return qs
-        return qs.filter(practice=self.request.user.clinician.practice)
+        return scope_queryset(
+            super().get_queryset(), self.request.user, 'practice',
+            self.request.query_params.get('practice_id'),
+        )
 
     def perform_create(self, serializer):
         serializer.save(practice=self.request.user.clinician.practice)
@@ -47,7 +46,7 @@ class PatientDetailView(PracticeScopedMixin, generics.RetrieveUpdateDestroyAPIVi
 @permission_classes([permissions.IsAuthenticated])
 def patient_trend(request, pk):
     """Return NIBUT trend data for a patient's assessment history."""
-    qs = Patient.objects.all() if request.user.is_superuser else Patient.objects.filter(practice=request.user.clinician.practice)
+    qs = scope_queryset(Patient.objects.all(), request.user, 'practice')
     try:
         patient = qs.get(pk=pk)
     except Patient.DoesNotExist:
