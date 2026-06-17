@@ -40,6 +40,20 @@ def test_download_ready_report(api, clinician):
 
 
 @pytest.mark.django_db
+@patch('apps.reports.views.generate_report_task')
+def test_regenerate_reuses_single_report(mock_task, api, clinician):
+    assessment = AssessmentFactory(patient=PatientFactory(practice=clinician.practice))
+
+    first = api.post('/api/reports/generate/', {'assessment': assessment.id}, format='json')
+    second = api.post('/api/reports/generate/', {'assessment': assessment.id}, format='json')
+
+    assert first.status_code == 202 and second.status_code == 202
+    # Same report row reused, not duplicated.
+    assert first.data['id'] == second.data['id']
+    assert Report.objects.filter(assessment=assessment).count() == 1
+
+
+@pytest.mark.django_db
 def test_cannot_generate_for_other_practice(api):
     other = AssessmentFactory()  # different practice
     resp = api.post('/api/reports/generate/', {'assessment': other.id}, format='json')

@@ -61,11 +61,21 @@ class GenerateReportView(generics.GenericAPIView):
         if not assessment:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        report = Report.objects.create(
+        # One report per assessment: reuse the existing row (regenerate in place)
+        # rather than accumulating duplicates. A re-run of the test is a new
+        # Assessment and so gets its own report.
+        report, created = Report.objects.get_or_create(
             assessment=assessment,
-            generated_by=request.user.clinician,
-            status='pending',
+            defaults={'generated_by': request.user.clinician, 'status': 'pending'},
         )
+        if not created:
+            if report.pdf_file:
+                report.pdf_file.delete(save=False)
+            report.pdf_file = ''
+            report.generated_by = request.user.clinician
+            report.status = 'pending'
+            report.generation_attempts = 0
+            report.save(update_fields=['pdf_file', 'generated_by', 'status', 'generation_attempts'])
 
         generate_report_task.delay(report_id=report.pk)
 

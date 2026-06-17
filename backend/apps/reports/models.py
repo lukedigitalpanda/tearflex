@@ -14,8 +14,11 @@ class Report(models.Model):
     # still force a manual retry, which resets the counter).
     MAX_GENERATION_ATTEMPTS = 3
 
-    assessment = models.ForeignKey(
-        'assessments.Assessment', on_delete=models.CASCADE, related_name='reports'
+    # One report per assessment: regenerating reuses this row, so failed/stale
+    # attempts never pile up. Re-running a test creates a new Assessment, which
+    # therefore gets its own report.
+    assessment = models.OneToOneField(
+        'assessments.Assessment', on_delete=models.CASCADE, related_name='report'
     )
     generated_by = models.ForeignKey(
         'accounts.Clinician', on_delete=models.SET_NULL, null=True, blank=True
