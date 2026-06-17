@@ -9,6 +9,11 @@ class Report(models.Model):
         ('failed', 'Failed'),
     ]
 
+    # Hard ceiling on generation attempts. Once reached the report stays
+    # 'failed' and is no longer retried automatically (a privileged user can
+    # still force a manual retry, which resets the counter).
+    MAX_GENERATION_ATTEMPTS = 3
+
     assessment = models.ForeignKey(
         'assessments.Assessment', on_delete=models.CASCADE, related_name='reports'
     )
@@ -17,6 +22,7 @@ class Report(models.Model):
     )
     pdf_file = models.FileField(upload_to='reports/%Y/%m/%d/', blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    generation_attempts = models.PositiveSmallIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

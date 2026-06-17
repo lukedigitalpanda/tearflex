@@ -4,7 +4,9 @@ import Link from 'next/link'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { usePatient, usePatientTrend } from '@/hooks/usePatients'
 import { useAssessments } from '@/hooks/useAssessments'
+import { useReports } from '@/hooks/useReports'
 import { usePractice } from '@/hooks/usePractice'
+import { ReportPreview } from '@/components/reports/ReportPreview'
 import { TrendChart } from './TrendChart'
 import { EditPatientDialog } from './EditPatientDialog'
 import { Button } from '@/components/ui/button'
@@ -16,6 +18,7 @@ export function PatientProfile({ id }: { id: number }) {
   const { data: patient, isLoading } = usePatient(id)
   const { data: trend } = usePatientTrend(id)
   const { data: assessments } = useAssessments({ patient: id })
+  const { data: reports } = useReports(id)
   const { data: practice } = usePractice()
   const [notesOpen, setNotesOpen] = useState(false)
 
@@ -27,6 +30,11 @@ export function PatientProfile({ id }: { id: number }) {
         <div>
           <h1 className="text-2xl font-bold">{patient.full_name}</h1>
           <p className="text-sm text-muted-foreground">DOB {patient.date_of_birth} · {patient.nhs_number || 'No NHS number'}</p>
+          {(patient.email || patient.phone) && (
+            <p className="mt-1 text-sm text-muted-foreground">
+              {[patient.email, patient.phone].filter(Boolean).join(' · ')}
+            </p>
+          )}
         </div>
         <EditPatientDialog patient={patient} />
       </div>
@@ -73,6 +81,17 @@ export function PatientProfile({ id }: { id: number }) {
                   <span className="text-xs text-muted-foreground">{a.status}</span>
                 </Link>
               ))}
+            </div>
+          )}
+      </Card>
+
+      <Card className="p-5">
+        <h2 className="mb-3 font-semibold">Reports</h2>
+        {(reports?.results.length ?? 0) === 0
+          ? <EmptyState title="No reports yet" hint="Generate a report from an assessment." />
+          : (
+            <div className="space-y-2">
+              {reports!.results.map((r) => <ReportPreview key={r.id} report={r} />)}
             </div>
           )}
       </Card>

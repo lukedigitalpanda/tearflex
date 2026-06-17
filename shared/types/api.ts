@@ -13,9 +13,13 @@ export interface ApiErrorBody {
 export interface Report {
   id: number
   assessment: number
+  patient: number
+  eye: 'left' | 'right'
+  assessed_at: string
   generated_by: number | null
   pdf_file: string | null
   status: 'pending' | 'ready' | 'failed'
+  generation_attempts: number
   created_at: string
 }
 

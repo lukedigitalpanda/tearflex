@@ -6,6 +6,25 @@ from weasyprint import HTML
 
 logger = logging.getLogger(__name__)
 
+OXFORD_LABELS = ['Absent', 'Minimal', 'Mild', 'Moderate', 'Marked', 'Severe']
+GUILLON_LABELS = [
+    'Open meshwork (~15nm)',
+    'Closed meshwork (~30nm)',
+    'Wave / flow (~60nm)',
+    'Amorphous (~80nm)',
+    'Coloured fringes (>90nm)',
+]
+
+
+def _nibut_band(seconds, normal_threshold, borderline_threshold):
+    if seconds is None:
+        return None
+    if seconds >= normal_threshold:
+        return {'label': 'Normal', 'css': 'band-normal'}
+    if seconds >= borderline_threshold:
+        return {'label': 'Borderline', 'css': 'band-borderline'}
+    return {'label': 'Concern', 'css': 'band-concern'}
+
 
 def _heatmap_data_uri(result) -> str | None:
     """Convert a TestResult's nibut_heatmap to a base64 data URI for HTML embedding."""
@@ -22,33 +41,49 @@ def _heatmap_data_uri(result) -> str | None:
         return None
 
 
-def generate_assessment_report(assessment) -> 'Report':
+def generate_assessment_report(report) -> 'Report':
     """
-    Generate a PDF report for an assessment.
-    Creates a Report record, renders the HTML template, converts to PDF with WeasyPrint,
+    Generate a PDF for an existing Report record.
+    Renders the HTML template, converts to PDF with WeasyPrint,
     and saves to the report's pdf_file field.
     """
-    from .models import Report
-
-    report = Report.objects.create(assessment=assessment, status='pending')
+    assessment = report.assessment
     try:
+        practice = assessment.clinician.practice if assessment.clinician else None
+        normal_t = getattr(practice, 'nibut_normal_threshold', None) or 10
+        borderline_t = getattr(practice, 'nibut_borderline_threshold', None) or 5
+
         captures_with_results = []
         for capture in assessment.captures.select_related('result').order_by('captured_at'):
             result = getattr(capture, 'result', None)
             confidence_pct = None
             if result and result.confidence_score is not None:
                 confidence_pct = round(result.confidence_score * 100)
-            captures_with_results.append({
+
+            item = {
                 'capture': capture,
                 'result': result,
                 'heatmap_uri': _heatmap_data_uri(result),
                 'confidence_pct': confidence_pct,
-            })
+            }
+
+            if capture.test_type == 'nibut' and result:
+                item['nibut_band'] = _nibut_band(result.nibut_first_breakup_seconds, normal_t, borderline_t)
+
+            if capture.test_type == 'fluorescein' and result and result.fluorescein_grade is not None:
+                idx = result.fluorescein_grade
+                item['fluorescein_grade_label'] = OXFORD_LABELS[idx] if 0 <= idx <= 5 else ''
+
+            if capture.test_type == 'lipid' and result and result.lipid_grade is not None:
+                idx = result.lipid_grade - 1
+                item['lipid_grade_label'] = GUILLON_LABELS[idx] if 0 <= idx <= 4 else ''
+
+            captures_with_results.append(item)
 
         context = {
             'assessment': assessment,
             'patient': assessment.patient,
-            'practice': assessment.clinician.practice if assessment.clinician else None,
+            'practice': practice,
             'clinician': assessment.clinician,
             'captures': captures_with_results,
         }
@@ -61,8 +96,9 @@ def generate_assessment_report(assessment) -> 'Report':
         report.status = 'ready'
         report.save(update_fields=['pdf_file', 'status'])
     except Exception:
+        # Re-raise so the Celery task can apply its retry/attempt-cap policy.
+        # The caller is responsible for marking the report 'failed'.
         logger.exception("PDF generation failed for assessment %s", assessment.id)
-        report.status = 'failed'
-        report.save(update_fields=['status'])
+        raise
 
     return report

@@ -4,10 +4,20 @@ from .models import Report
 
 
 class ReportSerializer(serializers.ModelSerializer):
+    patient = serializers.IntegerField(source='assessment.patient_id', read_only=True)
+    eye = serializers.CharField(source='assessment.eye', read_only=True)
+    assessed_at = serializers.DateTimeField(source='assessment.assessed_at', read_only=True)
+
     class Meta:
         model = Report
-        fields = ['id', 'assessment', 'generated_by', 'pdf_file', 'status', 'created_at']
-        read_only_fields = ['id', 'generated_by', 'pdf_file', 'status', 'created_at']
+        fields = [
+            'id', 'assessment', 'patient', 'eye', 'assessed_at',
+            'generated_by', 'pdf_file', 'status', 'generation_attempts', 'created_at',
+        ]
+        read_only_fields = [
+            'id', 'patient', 'eye', 'assessed_at',
+            'generated_by', 'pdf_file', 'status', 'generation_attempts', 'created_at',
+        ]
 
 
 class GenerateReportSerializer(serializers.Serializer):

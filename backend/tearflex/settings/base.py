@@ -153,3 +153,8 @@ CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
+# Acknowledge tasks only after they finish, and requeue any task whose worker
+# died mid-execution. This stops report-generation jobs being silently lost
+# (and left stuck on 'pending') when a worker is OOM-killed during PDF render.
+CELERY_TASK_ACKS_LATE = True
+CELERY_TASK_REJECT_ON_WORKER_LOST = True
