@@ -10,13 +10,17 @@ class ReportSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Report
+        # pdf_file is intentionally NOT exposed: DRF would render it as an
+        # absolute URL built from the internal request host (e.g.
+        # http://backend:8000/media/...), which is unreachable from a browser.
+        # PDFs are served via /api/download/{id} instead.
         fields = [
             'id', 'assessment', 'patient', 'eye', 'assessed_at',
-            'generated_by', 'pdf_file', 'status', 'generation_attempts', 'created_at',
+            'generated_by', 'status', 'generation_attempts', 'created_at',
         ]
         read_only_fields = [
             'id', 'patient', 'eye', 'assessed_at',
-            'generated_by', 'pdf_file', 'status', 'generation_attempts', 'created_at',
+            'generated_by', 'status', 'generation_attempts', 'created_at',
         ]
 
 

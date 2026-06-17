@@ -15,7 +15,7 @@ def test_generate_report_returns_202_pending(mock_task, api, clinician):
     assert gen.status_code == 202
     report_id = gen.data['id']
     assert gen.data['status'] == 'pending'
-    mock_task.delay.assert_called_once_with(assessment_id=assessment.pk)
+    mock_task.delay.assert_called_once_with(report_id=report_id)
 
     lst = api.get('/api/reports/')
     assert lst.status_code == 200
