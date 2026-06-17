@@ -5,10 +5,21 @@
 <style>
   @page { size: A4; margin: 2cm; }
   body { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; color: #1e293b; margin: 0; }
-  /* On-screen (in-app HTML view): pad and centre like a document. Ignored in print/PDF. */
+  /* On-screen (in-app HTML view): compact spacing so a report fits without
+     scrolling. Print/PDF keeps the roomier A4 layout above. */
   @media screen {
     html { background: #f1f5f9; }
-    body { max-width: 820px; margin: 0 auto; padding: 32px 40px; background: #fff; }
+    body { max-width: 820px; margin: 0 auto; padding: 20px 28px; background: #fff; font-size: 9pt; }
+    .header { margin-bottom: 12px; padding-bottom: 8px; }
+    .section { margin-bottom: 10px; }
+    .section-title { margin-bottom: 6px; padding-bottom: 3px; }
+    .capture-block { margin-bottom: 10px; }
+    .capture-header { padding: 6px 10px; }
+    .capture-body { padding: 8px 10px; }
+    .metrics-row { margin-bottom: 8px; }
+    .patient-grid { gap: 6px; }
+    .footer { margin-top: 12px; padding-top: 6px; }
+    .heatmap-img { max-width: 180px; }
   }
   .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0E7C7B; padding-bottom: 12px; margin-bottom: 20px; }
   .practice-name { font-size: 16pt; font-weight: bold; color: #0E7C7B; }
