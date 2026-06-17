@@ -8,6 +8,10 @@ from weasyprint import HTML
 
 logger = logging.getLogger(__name__)
 
+# Fixed clinical order so reports (and side-by-side comparisons) always list
+# tests in the same order regardless of capture time.
+TEST_TYPE_ORDER = {'nibut': 0, 'fluorescein': 1, 'lipid': 2}
+
 OXFORD_LABELS = ['Absent', 'Minimal', 'Mild', 'Moderate', 'Marked', 'Severe']
 GUILLON_LABELS = [
     'Open meshwork (~15nm)',
@@ -52,7 +56,11 @@ def build_report_context(report) -> dict:
     borderline_t = getattr(practice, 'nibut_borderline_threshold', None) or 5
 
     captures_with_results = []
-    for capture in assessment.captures.select_related('result').order_by('captured_at'):
+    ordered_captures = sorted(
+        assessment.captures.select_related('result'),
+        key=lambda c: (TEST_TYPE_ORDER.get(c.test_type, 99), c.captured_at),
+    )
+    for capture in ordered_captures:
         result = getattr(capture, 'result', None)
         confidence_pct = None
         if result and result.confidence_score is not None:
