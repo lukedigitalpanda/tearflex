@@ -23,6 +23,11 @@ export default function DashboardError({
         <p className="mt-1 text-sm text-muted-foreground">
           This page hit an unexpected error. You can try again or go back to your patients.
         </p>
+        {(error?.message || error?.digest) && (
+          <pre className="mx-auto mt-3 max-w-xl overflow-auto rounded-md bg-muted p-3 text-left text-xs text-muted-foreground">
+            {error.message || `digest: ${error.digest}`}
+          </pre>
+        )}
       </div>
       <div className="flex items-center gap-2">
         <Button variant="outline" onClick={() => reset()}>Try again</Button>

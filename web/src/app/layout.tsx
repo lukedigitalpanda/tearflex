@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { QueryProvider } from '@/lib/queryClient'
 import { ThemeProvider } from '@/components/providers/ThemeProvider'
+import { ChunkReloadGuard } from '@/components/providers/ChunkReloadGuard'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 
@@ -15,6 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en-gb" className={inter.variable} suppressHydrationWarning>
       <body className="font-sans antialiased">
+        <ChunkReloadGuard />
         <ThemeProvider>
           <QueryProvider>{children}</QueryProvider>
         </ThemeProvider>
