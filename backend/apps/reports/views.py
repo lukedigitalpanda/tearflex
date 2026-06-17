@@ -172,7 +172,8 @@ class ReportHtmlView(PracticeScopedReportMixin, generics.GenericAPIView):
         report = self.get_queryset().filter(pk=pk, status='ready').first()
         if report is None:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
-        return HttpResponse(render_report_html(report), content_type='text/html')
+        dark = request.query_params.get('theme') == 'dark'
+        return HttpResponse(render_report_html(report, dark=dark), content_type='text/html')
 
 
 class DownloadReportView(PracticeScopedReportMixin, generics.GenericAPIView):

@@ -87,9 +87,12 @@ def build_report_context(report) -> dict:
     }
 
 
-def render_report_html(report) -> str:
-    """Render the report as an HTML document string."""
-    return render_to_string('reports/assessment_report.html', build_report_context(report))
+def render_report_html(report, dark: bool = False) -> str:
+    """Render the report as an HTML document string. `dark` switches the
+    on-screen view to the dark theme (PDF generation always renders light)."""
+    context = build_report_context(report)
+    context['dark'] = dark
+    return render_to_string('reports/assessment_report.html', context)
 
 
 def generate_assessment_report(report) -> 'Report':

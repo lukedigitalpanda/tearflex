@@ -3,10 +3,11 @@ import { fetchWithRefresh, type RefreshTokens } from '@/lib/server/serverFetch'
 import { API_BASE, clearAuthCookies, readAuthCookies, setAuthCookies } from '@/lib/server/cookies'
 
 // Serves the report as an HTML document for the in-app viewer.
-export async function GET(_req: Request, ctx: { params: { id: string } }) {
+export async function GET(req: Request, ctx: { params: { id: string } }) {
+  const theme = new URL(req.url).searchParams.get('theme') === 'dark' ? '?theme=dark' : ''
   const { access, refresh } = readAuthCookies()
   const rotation: { tokens: RefreshTokens | null } = { tokens: null }
-  const res = await fetchWithRefresh(`${API_BASE}/reports/${ctx.params.id}/html/`, { method: 'GET' }, {
+  const res = await fetchWithRefresh(`${API_BASE}/reports/${ctx.params.id}/html/${theme}`, { method: 'GET' }, {
     access, refresh, apiBase: API_BASE, onTokens: (t) => { rotation.tokens = t },
   })
   if (res.status === 401) {

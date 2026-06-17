@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en"{% if dark %} class="dark"{% endif %}>
 <head>
 <meta charset="UTF-8">
 <style>
@@ -8,7 +8,7 @@
   /* On-screen (in-app HTML view): compact spacing so a report fits without
      scrolling. Print/PDF keeps the roomier A4 layout above. */
   @media screen {
-    body { max-width: none; margin: 0; padding: 0; background: #fff; font-size: 9pt; }
+    body { max-width: none; margin: 0; padding: 24px 28px; background: #fff; font-size: 9pt; }
     .header { margin-bottom: 12px; padding-bottom: 8px; }
     .section { margin-bottom: 10px; }
     .section-title { margin-bottom: 6px; padding-bottom: 3px; }
@@ -19,6 +19,29 @@
     .patient-grid { gap: 6px; }
     .footer { margin-top: 12px; padding-top: 6px; }
     .heatmap-img { max-width: 180px; }
+
+    /* Dark theme (matches the app when in dark mode; PDF stays light). */
+    html.dark body { background: #0f172a; color: #e2e8f0; }
+    html.dark .practice-name { color: #5eead4; }
+    html.dark .practice-address,
+    html.dark .report-date,
+    html.dark .section-title,
+    html.dark .field-label,
+    html.dark .metric-value-descriptor,
+    html.dark .metric-unit,
+    html.dark .metric-label { color: #94a3b8; }
+    html.dark .report-title { color: #e2e8f0; }
+    html.dark .field-value,
+    html.dark .metric-value { color: #f1f5f9; }
+    html.dark .section-title,
+    html.dark .capture-block,
+    html.dark .heatmap-img,
+    html.dark .footer { border-color: #334155; }
+    html.dark .capture-header { background: #1e293b; color: #cbd5e1; }
+    html.dark .metric-tile,
+    html.dark .thresholds-note { background: #1e293b; }
+    html.dark .thresholds-note { color: #94a3b8; }
+    html.dark .footer { color: #64748b; }
   }
   .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0E7C7B; padding-bottom: 12px; margin-bottom: 20px; }
   .practice-name { font-size: 16pt; font-weight: bold; color: #0E7C7B; }

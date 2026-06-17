@@ -77,6 +77,6 @@ export function downloadReportUrl(id: number) {
 }
 
 // In-app HTML view of the report (rendered from the same template as the PDF).
-export function reportViewUrl(id: number) {
-  return `/api/report-view/${id}`
+export function reportViewUrl(id: number, dark = false) {
+  return `/api/report-view/${id}${dark ? '?theme=dark' : ''}`
 }

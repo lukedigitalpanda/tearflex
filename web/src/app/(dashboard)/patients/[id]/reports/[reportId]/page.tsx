@@ -1,11 +1,14 @@
 'use client'
 import { useEffect, useRef } from 'react'
+import { useTheme } from 'next-themes'
 import Link from 'next/link'
 import { reportViewUrl, downloadReportUrl } from '@/hooks/useReports'
 import { Button } from '@/components/ui/button'
 
 export default function ReportViewPage({ params }: { params: { id: string; reportId: string } }) {
   const reportId = Number(params.reportId)
+  const { resolvedTheme } = useTheme()
+  const dark = resolvedTheme === 'dark'
   const frameRef = useRef<HTMLIFrameElement>(null)
 
   // Grow the (same-origin) iframe to its content height so the report shows in
@@ -27,7 +30,7 @@ export default function ReportViewPage({ params }: { params: { id: string; repor
     const interval = setInterval(fit, 250)
     const stop = setTimeout(() => clearInterval(interval), 3000)
     return () => { clearInterval(interval); clearTimeout(stop) }
-  }, [reportId])
+  }, [reportId, dark])
 
   return (
     <div className="space-y-4">
@@ -36,7 +39,7 @@ export default function ReportViewPage({ params }: { params: { id: string; repor
           <Link href={`/patients/${params.id}`}>← Back to patient</Link>
         </Button>
         <div className="flex items-center gap-3">
-          <a href={reportViewUrl(reportId)} target="_blank" rel="noreferrer"
+          <a href={reportViewUrl(reportId, dark)} target="_blank" rel="noreferrer"
             className="text-sm font-medium text-teal-700 hover:underline dark:text-teal-400">
             Open in new tab
           </a>
@@ -48,10 +51,10 @@ export default function ReportViewPage({ params }: { params: { id: string; repor
       </div>
       <iframe
         ref={frameRef}
-        src={reportViewUrl(reportId)}
+        src={reportViewUrl(reportId, dark)}
         title="Report"
         scrolling="no"
-        className="block w-full overflow-hidden"
+        className="block w-full overflow-hidden rounded-md border border-border"
         style={{ height: '70vh' }}
       />
     </div>
