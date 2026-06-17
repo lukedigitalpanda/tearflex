@@ -54,6 +54,20 @@ def test_regenerate_reuses_single_report(mock_task, api, clinician):
 
 
 @pytest.mark.django_db
+def test_html_view_returns_report_html(api, clinician):
+    from apps.reports.generators import generate_assessment_report
+
+    report = generate_assessment_report(Report.objects.create(
+        assessment=AssessmentFactory(patient=PatientFactory(practice=clinician.practice)),
+        status='pending',
+    ))
+    resp = api.get(f'/api/reports/{report.id}/html/')
+    assert resp.status_code == 200
+    assert resp['Content-Type'].startswith('text/html')
+    assert b'Tear Film Assessment Report' in resp.content
+
+
+@pytest.mark.django_db
 def test_cannot_generate_for_other_practice(api):
     other = AssessmentFactory()  # different practice
     resp = api.post('/api/reports/generate/', {'assessment': other.id}, format='json')

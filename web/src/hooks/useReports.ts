@@ -76,6 +76,7 @@ export function downloadReportUrl(id: number) {
   return `/api/download/${id}`
 }
 
-export function viewReportUrl(id: number) {
-  return `/api/download/${id}?inline=1`
+// In-app HTML view of the report (rendered from the same template as the PDF).
+export function reportViewUrl(id: number) {
+  return `/api/report-view/${id}`
 }

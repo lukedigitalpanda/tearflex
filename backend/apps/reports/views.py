@@ -1,12 +1,13 @@
 import logging
 
-from django.http import FileResponse
+from django.http import FileResponse, HttpResponse
 from django.utils import timezone
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 
 from apps.assessments.models import Assessment
 from .access import user_is_report_admin
+from .generators import render_report_html
 from .models import Report
 from .retention import purge_expired_reports
 from .serializers import GenerateReportSerializer, ReportSerializer
@@ -157,6 +158,21 @@ class RestoreReportView(PracticeScopedReportMixin, generics.GenericAPIView):
         report.save(update_fields=['deleted_at'])
         logger.info("Report %s restored by user %s", report.pk, request.user.pk)
         return Response(ReportSerializer(report).data, status=status.HTTP_200_OK)
+
+
+class ReportHtmlView(PracticeScopedReportMixin, generics.GenericAPIView):
+    """Render a ready report as an HTML document for in-app viewing.
+
+    Same content as the PDF (shared template), served as HTML so it can be shown
+    inside the web app rather than via the browser's PDF viewer.
+    """
+    serializer_class = ReportSerializer
+
+    def get(self, request, pk):
+        report = self.get_queryset().filter(pk=pk, status='ready').first()
+        if report is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        return HttpResponse(render_report_html(report), content_type='text/html')
 
 
 class DownloadReportView(PracticeScopedReportMixin, generics.GenericAPIView):

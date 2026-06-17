@@ -43,6 +43,55 @@ def _heatmap_data_uri(result) -> str | None:
         return None
 
 
+def build_report_context(report) -> dict:
+    """Assemble the template context for an assessment report (shared by the
+    PDF and the in-app HTML view, so both render identical content)."""
+    assessment = report.assessment
+    practice = assessment.clinician.practice if assessment.clinician else None
+    normal_t = getattr(practice, 'nibut_normal_threshold', None) or 10
+    borderline_t = getattr(practice, 'nibut_borderline_threshold', None) or 5
+
+    captures_with_results = []
+    for capture in assessment.captures.select_related('result').order_by('captured_at'):
+        result = getattr(capture, 'result', None)
+        confidence_pct = None
+        if result and result.confidence_score is not None:
+            confidence_pct = round(result.confidence_score * 100)
+
+        item = {
+            'capture': capture,
+            'result': result,
+            'heatmap_uri': _heatmap_data_uri(result),
+            'confidence_pct': confidence_pct,
+        }
+
+        if capture.test_type == 'nibut' and result:
+            item['nibut_band'] = _nibut_band(result.nibut_first_breakup_seconds, normal_t, borderline_t)
+
+        if capture.test_type == 'fluorescein' and result and result.fluorescein_grade is not None:
+            idx = result.fluorescein_grade
+            item['fluorescein_grade_label'] = OXFORD_LABELS[idx] if 0 <= idx <= 5 else ''
+
+        if capture.test_type == 'lipid' and result and result.lipid_grade is not None:
+            idx = result.lipid_grade - 1
+            item['lipid_grade_label'] = GUILLON_LABELS[idx] if 0 <= idx <= 4 else ''
+
+        captures_with_results.append(item)
+
+    return {
+        'assessment': assessment,
+        'patient': assessment.patient,
+        'practice': practice,
+        'clinician': assessment.clinician,
+        'captures': captures_with_results,
+    }
+
+
+def render_report_html(report) -> str:
+    """Render the report as an HTML document string."""
+    return render_to_string('reports/assessment_report.html', build_report_context(report))
+
+
 def generate_assessment_report(report) -> 'Report':
     """
     Generate a PDF for an existing Report record.
@@ -55,46 +104,7 @@ def generate_assessment_report(report) -> 'Report':
     # regeneration still leaves the previous report downloadable.)
     old_file_name = report.pdf_file.name or None
     try:
-        practice = assessment.clinician.practice if assessment.clinician else None
-        normal_t = getattr(practice, 'nibut_normal_threshold', None) or 10
-        borderline_t = getattr(practice, 'nibut_borderline_threshold', None) or 5
-
-        captures_with_results = []
-        for capture in assessment.captures.select_related('result').order_by('captured_at'):
-            result = getattr(capture, 'result', None)
-            confidence_pct = None
-            if result and result.confidence_score is not None:
-                confidence_pct = round(result.confidence_score * 100)
-
-            item = {
-                'capture': capture,
-                'result': result,
-                'heatmap_uri': _heatmap_data_uri(result),
-                'confidence_pct': confidence_pct,
-            }
-
-            if capture.test_type == 'nibut' and result:
-                item['nibut_band'] = _nibut_band(result.nibut_first_breakup_seconds, normal_t, borderline_t)
-
-            if capture.test_type == 'fluorescein' and result and result.fluorescein_grade is not None:
-                idx = result.fluorescein_grade
-                item['fluorescein_grade_label'] = OXFORD_LABELS[idx] if 0 <= idx <= 5 else ''
-
-            if capture.test_type == 'lipid' and result and result.lipid_grade is not None:
-                idx = result.lipid_grade - 1
-                item['lipid_grade_label'] = GUILLON_LABELS[idx] if 0 <= idx <= 4 else ''
-
-            captures_with_results.append(item)
-
-        context = {
-            'assessment': assessment,
-            'patient': assessment.patient,
-            'practice': practice,
-            'clinician': assessment.clinician,
-            'captures': captures_with_results,
-        }
-
-        html_string = render_to_string('reports/assessment_report.html', context)
+        html_string = render_report_html(report)
         pdf_bytes = HTML(string=html_string).write_pdf()
 
         filename = f'tearflex_report_{assessment.id}.pdf'

@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { downloadReportUrl, viewReportUrl, useRetryReport, useDeleteReport } from '@/hooks/useReports'
+import { downloadReportUrl, reportViewUrl, useRetryReport, useDeleteReport } from '@/hooks/useReports'
 import { useIsAdmin } from '@/hooks/useRole'
 import { Button } from '@/components/ui/button'
 import {
@@ -55,13 +55,13 @@ export function ReportPreview({ report }: { report: Report }) {
             </DialogHeader>
             {viewOpen && (
               <iframe
-                src={viewReportUrl(report.id)}
+                src={reportViewUrl(report.id)}
                 title={`${eye} Eye report from ${when}`}
                 className="min-h-0 w-full flex-1 rounded-md border border-border bg-muted"
               />
             )}
             <DialogFooter className="sm:justify-between">
-              <a href={viewReportUrl(report.id)} target="_blank" rel="noreferrer"
+              <a href={reportViewUrl(report.id)} target="_blank" rel="noreferrer"
                 className="text-sm font-medium text-teal-700 hover:underline dark:text-teal-400">
                 Open in new tab
               </a>
