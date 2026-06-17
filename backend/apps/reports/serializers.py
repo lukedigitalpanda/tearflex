@@ -6,6 +6,7 @@ from .models import Report
 
 class ReportSerializer(serializers.ModelSerializer):
     patient = serializers.IntegerField(source='assessment.patient_id', read_only=True)
+    patient_name = serializers.CharField(source='assessment.patient.full_name', read_only=True)
     eye = serializers.CharField(source='assessment.eye', read_only=True)
     assessed_at = serializers.DateTimeField(source='assessment.assessed_at', read_only=True)
 
@@ -16,12 +17,12 @@ class ReportSerializer(serializers.ModelSerializer):
         # http://backend:8000/media/...), which is unreachable from a browser.
         # PDFs are served via /api/download/{id} instead.
         fields = [
-            'id', 'assessment', 'patient', 'eye', 'assessed_at',
+            'id', 'assessment', 'patient', 'patient_name', 'eye', 'assessed_at',
             'generated_by', 'status', 'generation_attempts', 'created_at',
             'completed_at', 'deleted_at',
         ]
         read_only_fields = [
-            'id', 'patient', 'eye', 'assessed_at',
+            'id', 'patient', 'patient_name', 'eye', 'assessed_at',
             'generated_by', 'status', 'generation_attempts', 'created_at',
             'completed_at', 'deleted_at',
         ]

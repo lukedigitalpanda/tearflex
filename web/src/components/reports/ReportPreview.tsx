@@ -60,9 +60,14 @@ export function ReportPreview({ report }: { report: Report }) {
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Delete report?</DialogTitle>
-                <DialogDescription>
-                  This permanently deletes the {eye} Eye report from {when}, including its PDF. This cannot be undone.
+                <DialogTitle>Delete this report?</DialogTitle>
+                <DialogDescription asChild>
+                  <div className="space-y-2">
+                    <p>The {eye} Eye report from {when} will move to <strong>Settings → Recently deleted</strong>, where it can be restored.</p>
+                    <p className="font-medium text-status-severe">
+                      It is permanently deleted after 30 days and cannot be recovered after that — restore it before then if it&apos;s still needed.
+                    </p>
+                  </div>
                 </DialogDescription>
               </DialogHeader>
               {del.isError && (

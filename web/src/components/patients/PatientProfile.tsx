@@ -7,7 +7,6 @@ import { useAssessments } from '@/hooks/useAssessments'
 import { useReports } from '@/hooks/useReports'
 import { usePractice } from '@/hooks/usePractice'
 import { ReportPreview } from '@/components/reports/ReportPreview'
-import { DeletedReportsCard } from '@/components/reports/DeletedReportsCard'
 import { TrendChart } from './TrendChart'
 import { EditPatientDialog } from './EditPatientDialog'
 import { Button } from '@/components/ui/button'
@@ -96,8 +95,6 @@ export function PatientProfile({ id }: { id: number }) {
             </div>
           )}
       </Card>
-
-      <DeletedReportsCard patientId={id} />
     </div>
   )
 }

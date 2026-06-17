@@ -14,6 +14,7 @@ export interface Report {
   id: number
   assessment: number
   patient: number
+  patient_name: string
   eye: 'left' | 'right'
   assessed_at: string
   generated_by: number | null
