@@ -51,7 +51,7 @@ export default function ReportViewPage({ params }: { params: { id: string; repor
         src={reportViewUrl(reportId)}
         title="Report"
         scrolling="no"
-        className="block w-full overflow-hidden rounded-md border border-border bg-muted"
+        className="block w-full overflow-hidden"
         style={{ height: '70vh' }}
       />
     </div>
