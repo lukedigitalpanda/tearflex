@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button'
 export default function ReportViewPage({ params }: { params: { id: string; reportId: string } }) {
   const reportId = Number(params.reportId)
   const { resolvedTheme } = useTheme()
-  const dark = resolvedTheme === 'dark'
   const frameRef = useRef<HTMLIFrameElement>(null)
   const [ready, setReady] = useState(false)
 
@@ -46,16 +45,10 @@ export default function ReportViewPage({ params }: { params: { id: string; repor
         <Button asChild variant="ghost" size="sm">
           <Link href={`/patients/${params.id}`}>← Back to patient</Link>
         </Button>
-        <div className="flex items-center gap-3">
-          <a href={reportViewUrl(reportId, dark)} target="_blank" rel="noreferrer"
-            className="text-sm font-medium text-teal-700 hover:underline dark:text-teal-400">
-            Open in new tab
-          </a>
-          <Button variant="outline" size="sm"
-            onClick={() => window.open(downloadReportUrl(reportId), '_blank')}>
-            Download
-          </Button>
-        </div>
+        <Button variant="outline" size="sm"
+          onClick={() => window.open(downloadReportUrl(reportId), '_blank')}>
+          Download
+        </Button>
       </div>
       <iframe
         ref={frameRef}
