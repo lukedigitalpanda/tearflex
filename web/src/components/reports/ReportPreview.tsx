@@ -28,7 +28,10 @@ export function ReportPreview({ report }: { report: Report }) {
     <div className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3">
       <div>
         <div className="font-medium">{report.eye === 'left' ? 'Left' : 'Right'} Eye · {new Date(report.assessed_at).toLocaleDateString('en-GB')}</div>
-        <div className="text-xs text-muted-foreground">{STATUS_LABEL[report.status]}</div>
+        <div className="text-xs text-muted-foreground">
+          {STATUS_LABEL[report.status]}
+          {report.status === 'ready' && ` · Generated ${new Date(report.created_at).toLocaleString('en-GB')}`}
+        </div>
       </div>
       <div className="flex items-center gap-2">
         {isAdmin && unfinished && (
