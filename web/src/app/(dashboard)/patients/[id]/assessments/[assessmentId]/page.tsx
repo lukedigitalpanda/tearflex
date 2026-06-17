@@ -1,10 +1,12 @@
 'use client'
+import Link from 'next/link'
 import { useAssessment } from '@/hooks/useAssessments'
 import { usePractice } from '@/hooks/usePractice'
 import { useReports } from '@/hooks/useReports'
 import { ResultsDisplay } from '@/components/assessments/ResultsDisplay'
 import { GenerateReportButton } from '@/components/reports/GenerateReportButton'
 import { CompareButton } from '@/components/reports/CompareButton'
+import { Button } from '@/components/ui/button'
 import { LoadingState } from '@/components/common/LoadingState'
 import { EmptyState } from '@/components/common/EmptyState'
 import type { TestCapture } from '@shared/types/assessment'
@@ -26,6 +28,9 @@ export default function AssessmentDetailPage({ params }: { params: { assessmentI
 
   return (
     <div className="space-y-6">
+      <Button asChild variant="ghost" size="sm" className="-ml-2">
+        <Link href={`/patients/${assessment.patient}`}>← Back to patient</Link>
+      </Button>
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold">{assessment.patient_name}</h1>
