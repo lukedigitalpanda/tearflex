@@ -10,7 +10,15 @@ describe('api', () => {
     ))
     const data = await api.get<{ id: number }>('patients/')
     expect(data.id).toBe(1)
-    expect(fetch).toHaveBeenCalledWith('/api/proxy/patients/', expect.objectContaining({ method: 'GET', credentials: 'include' }))
+    expect(fetch).toHaveBeenCalledWith('/api/proxy/patients', expect.objectContaining({ method: 'GET', credentials: 'include' }))
+  })
+
+  it('strips the trailing slash but keeps the query string (avoids the proxy 308)', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ count: 0 }), { status: 200, headers: { 'content-type': 'application/json' } })
+    ))
+    await api.get('reports/?patient=5')
+    expect(fetch).toHaveBeenCalledWith('/api/proxy/reports?patient=5', expect.objectContaining({ method: 'GET' }))
   })
 
   it('throws ApiError with status + detail on failure', async () => {

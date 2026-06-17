@@ -7,8 +7,19 @@ export class ApiError extends Error {
 
 const BASE = '/api/proxy'
 
+// API paths use DRF's trailing-slash convention (e.g. "reports/"). Sending that
+// slash to the proxy makes Next.js (trailingSlash: false) answer with a 308
+// redirect, doubling every request's round-trips. Strip the trailing slash from
+// the path here (keeping the query string); the proxy re-adds it for the
+// backend, so Django still sees the canonical "reports/" URL.
+function toProxyUrl(path: string): string {
+  const [pathPart, query] = path.split('?')
+  const trimmed = pathPart.replace(/\/+$/, '')
+  return `${BASE}/${trimmed}${query ? `?${query}` : ''}`
+}
+
 async function request<T>(path: string, init: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}/${path}`, { credentials: 'include', ...init })
+  const res = await fetch(toProxyUrl(path), { credentials: 'include', ...init })
   const ct = res.headers.get('content-type') || ''
   // Read the body from a clone so `res` itself stays unconsumed (keeps the unit
   // tests, which reuse a single mocked Response across calls, working).
