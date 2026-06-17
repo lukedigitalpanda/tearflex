@@ -46,7 +46,7 @@ export default function CompareReportsPage({
           {ordered.map((r, i) => (
             <div key={r.id} className="space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <span className="font-medium">{new Date(r.assessed_at).toLocaleDateString('en-GB')}</span>
+                <span className="font-medium">{new Date(r.assessed_at).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                 <span className="text-xs text-muted-foreground">
                   {i === 0 ? 'Earlier' : 'Later'}
                 </span>

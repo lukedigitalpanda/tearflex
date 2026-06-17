@@ -42,7 +42,7 @@ export function CompareButton({ patientId, reportId, eye }: { patientId: number;
               <button key={r.id} type="button"
                 onClick={() => router.push(`/patients/${patientId}/reports/${reportId}/compare/${r.id}`)}
                 className="flex w-full items-center justify-between rounded-md border border-border px-4 py-2 text-left text-sm hover:border-teal-600">
-                <span>{eyeLabel} Eye · {new Date(r.assessed_at).toLocaleDateString('en-GB')}</span>
+                <span>{eyeLabel} Eye · {new Date(r.assessed_at).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                 <span className="text-xs text-muted-foreground">Compare →</span>
               </button>
             ))}
