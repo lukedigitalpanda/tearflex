@@ -27,6 +27,9 @@ class Report(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     generation_attempts = models.PositiveSmallIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
+    # When PDF generation actually finished (status -> ready). Distinct from
+    # created_at, which is when generation was first queued.
+    completed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ['-created_at']

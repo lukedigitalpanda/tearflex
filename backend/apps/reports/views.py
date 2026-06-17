@@ -5,21 +5,12 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 
 from apps.assessments.models import Assessment
+from .access import user_is_report_admin
 from .models import Report
 from .serializers import GenerateReportSerializer, ReportSerializer
 from .tasks import generate_report_task
 
 logger = logging.getLogger(__name__)
-
-
-def user_is_report_admin(user) -> bool:
-    """Superusers and practice admins are the elevated group for reports: they
-    may see pending/failed reports, retry them, and delete them. Ordinary
-    clinicians/technicians only ever see finished ('ready') reports."""
-    if user.is_superuser:
-        return True
-    clinician = getattr(user, 'clinician', None)
-    return bool(clinician and clinician.role == 'admin')
 
 
 class PracticeScopedReportMixin:

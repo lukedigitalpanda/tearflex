@@ -3,6 +3,7 @@ import logging
 from django.template.loader import render_to_string
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
+from django.utils import timezone
 from weasyprint import HTML
 
 logger = logging.getLogger(__name__)
@@ -99,7 +100,8 @@ def generate_assessment_report(report) -> 'Report':
         filename = f'tearflex_report_{assessment.id}.pdf'
         report.pdf_file.save(filename, ContentFile(pdf_bytes), save=False)
         report.status = 'ready'
-        report.save(update_fields=['pdf_file', 'status'])
+        report.completed_at = timezone.now()
+        report.save(update_fields=['pdf_file', 'status', 'completed_at'])
         # New PDF is stored; drop the superseded one so files don't accumulate.
         if old_file_name and old_file_name != report.pdf_file.name:
             default_storage.delete(old_file_name)

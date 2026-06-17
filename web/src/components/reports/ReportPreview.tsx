@@ -30,7 +30,9 @@ export function ReportPreview({ report }: { report: Report }) {
         <div className="font-medium">{report.eye === 'left' ? 'Left' : 'Right'} Eye · {new Date(report.assessed_at).toLocaleDateString('en-GB')}</div>
         <div className="text-xs text-muted-foreground">
           {report.status === 'ready'
-            ? `Generated at ${new Date(report.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} · Ready`
+            ? (report.completed_at
+                ? `Generated at ${new Date(report.completed_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} · Ready`
+                : 'Ready')
             : STATUS_LABEL[report.status]}
         </div>
       </div>

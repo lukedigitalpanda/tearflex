@@ -20,6 +20,8 @@ export interface Report {
   status: 'pending' | 'ready' | 'failed'
   generation_attempts: number
   created_at: string
+  // Completion time, only present for superadmin / practice-admin accounts.
+  completed_at?: string | null
 }
 
 export interface ClinicianInviteResult {

@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from .access import user_is_report_admin
 from .models import Report
 
 
@@ -16,12 +17,20 @@ class ReportSerializer(serializers.ModelSerializer):
         # PDFs are served via /api/download/{id} instead.
         fields = [
             'id', 'assessment', 'patient', 'eye', 'assessed_at',
-            'generated_by', 'status', 'generation_attempts', 'created_at',
+            'generated_by', 'status', 'generation_attempts', 'created_at', 'completed_at',
         ]
         read_only_fields = [
             'id', 'patient', 'eye', 'assessed_at',
-            'generated_by', 'status', 'generation_attempts', 'created_at',
+            'generated_by', 'status', 'generation_attempts', 'created_at', 'completed_at',
         ]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # completed_at is an admin-only detail; hide it from ordinary clinicians.
+        request = self.context.get('request')
+        if not user_is_report_admin(getattr(request, 'user', None)):
+            data.pop('completed_at', None)
+        return data
 
 
 class GenerateReportSerializer(serializers.Serializer):

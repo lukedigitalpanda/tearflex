@@ -11,6 +11,7 @@ def test_generate_produces_ready_report_with_pdf():
     generate_assessment_report(report)
     assert isinstance(report, Report)
     assert report.status == 'ready'
+    assert report.completed_at is not None
     assert report.pdf_file.name.endswith('.pdf')
     report.pdf_file.open('rb')
     head = report.pdf_file.read(5)
