@@ -12,9 +12,10 @@ from .tasks import generate_report_task
 logger = logging.getLogger(__name__)
 
 
-def user_can_see_unfinished_reports(user) -> bool:
-    """Superusers and practice admins may see pending/failed reports and retry
-    them. Ordinary clinicians/technicians only ever see finished ('ready') ones."""
+def user_is_report_admin(user) -> bool:
+    """Superusers and practice admins are the elevated group for reports: they
+    may see pending/failed reports, retry them, and delete them. Ordinary
+    clinicians/technicians only ever see finished ('ready') reports."""
     if user.is_superuser:
         return True
     clinician = getattr(user, 'clinician', None)
@@ -28,7 +29,7 @@ class PracticeScopedReportMixin:
         qs = Report.objects.select_related('assessment', 'generated_by')
         if not self.request.user.is_superuser:
             qs = qs.filter(assessment__patient__practice=self.request.user.clinician.practice)
-        if not user_can_see_unfinished_reports(self.request.user):
+        if not user_is_report_admin(self.request.user):
             qs = qs.filter(status='ready')
         patient = self.request.query_params.get('patient')
         if patient:
@@ -80,7 +81,7 @@ class RetryReportView(PracticeScopedReportMixin, generics.GenericAPIView):
     serializer_class = ReportSerializer
 
     def post(self, request, pk):
-        if not user_can_see_unfinished_reports(request.user):
+        if not user_is_report_admin(request.user):
             return Response({'detail': 'Not permitted.'}, status=status.HTTP_403_FORBIDDEN)
         report = self.get_queryset().filter(pk=pk).first()
         if report is None:
@@ -92,6 +93,31 @@ class RetryReportView(PracticeScopedReportMixin, generics.GenericAPIView):
         logger.info("Manual retry queued for report %s by user %s", report.pk, request.user.pk)
         generate_report_task.delay(report_id=report.pk)
         return Response(ReportSerializer(report).data, status=status.HTTP_202_ACCEPTED)
+
+
+class DeleteReportView(PracticeScopedReportMixin, generics.GenericAPIView):
+    """Permanently delete a report (DB row + stored PDF).
+
+    Restricted to superusers and practice admins as a manual backup/cleanup
+    tool (e.g. for duplicate or irrecoverable reports). The deletion is logged.
+    """
+    serializer_class = ReportSerializer
+
+    def delete(self, request, pk):
+        if not user_is_report_admin(request.user):
+            return Response({'detail': 'Not permitted.'}, status=status.HTTP_403_FORBIDDEN)
+        report = self.get_queryset().filter(pk=pk).first()
+        if report is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        logger.info(
+            "Report %s (assessment %s) deleted by user %s",
+            report.pk, report.assessment_id, request.user.pk,
+        )
+        if report.pdf_file:
+            report.pdf_file.delete(save=False)
+        report.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class DownloadReportView(PracticeScopedReportMixin, generics.GenericAPIView):

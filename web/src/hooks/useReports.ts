@@ -44,6 +44,14 @@ export function useRetryReport() {
   })
 }
 
+export function useDeleteReport() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => api.del<void>(`reports/${id}/`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['reports'], exact: false }),
+  })
+}
+
 export function downloadReportUrl(id: number) {
   return `/api/download/${id}`
 }
