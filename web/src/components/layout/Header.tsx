@@ -50,7 +50,7 @@ export function Header() {
   const isSuperuser = me?.user.is_superuser
 
   return (
-    <header className="flex h-14 items-center justify-between border-b border-border bg-card px-6">
+    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-card px-6">
       <div className="text-sm text-muted-foreground">
         {isSuperuser
           ? <PracticeSelector />
