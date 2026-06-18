@@ -7,10 +7,13 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import Practice, Clinician, PasswordResetToken
+from django.utils import timezone
+from .models import Practice, Clinician, PasswordResetToken, OnboardingRegistration
 from .scoping import accessible_practice_ids, resolve_practice_scope, scope_queryset
 from rest_framework.exceptions import ValidationError
 from .management import can_manage, is_last_active_admin
+from .email_classification import is_free_or_disposable
+from .onboarding import provision_registration
 from .serializers import (
     MeSerializer, PracticeSerializer, PracticeCreateSerializer, ClinicianSerializer,
     ClinicianInviteSerializer, ClinicianManageSerializer, ClinicianRegisterSerializer,
@@ -276,3 +279,33 @@ class OnboardingSubmitView(generics.GenericAPIView):
             {'detail': 'Check your email to verify your account.'},
             status=status.HTTP_201_CREATED,
         )
+
+
+class OnboardingVerifyView(generics.GenericAPIView):
+    """Verify an onboarding email; auto-provision professional domains, route
+    free/disposable domains to superadmin approval. Issues no JWTs."""
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        token = request.data.get('token', '')
+        try:
+            reg = OnboardingRegistration.objects.get(email_token=token)
+        except OnboardingRegistration.DoesNotExist:
+            raise ValidationError('Invalid or expired verification link.')
+        if reg.status == 'provisioned':
+            raise ValidationError('This account has already been set up. Please sign in.')
+        if reg.status == 'rejected':
+            raise ValidationError('This application was not approved.')
+
+        if reg.email_verified_at is None:
+            reg.email_verified_at = timezone.now()
+            reg.save(update_fields=['email_verified_at'])
+
+        if reg.status == 'awaiting_approval' or is_free_or_disposable(reg.contact_email):
+            if reg.status != 'awaiting_approval':
+                reg.status = 'awaiting_approval'
+                reg.save(update_fields=['status'])
+            return Response({'status': 'awaiting_approval'})
+
+        provision_registration(reg)
+        return Response({'status': 'provisioned'})

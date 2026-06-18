@@ -7,6 +7,7 @@ urlpatterns = [
     path('refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('register/', views.RegisterView.as_view(), name='register'),
     path('onboarding/', views.OnboardingSubmitView.as_view(), name='onboarding-submit'),
+    path('onboarding/verify/', views.OnboardingVerifyView.as_view(), name='onboarding-verify'),
     path('me/', views.MeView.as_view(), name='me'),
     path('practices/', views.PracticeListView.as_view(), name='practice-list'),
     path('practice/', views.PracticeView.as_view(), name='practice'),
