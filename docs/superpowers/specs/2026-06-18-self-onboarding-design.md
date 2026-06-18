@@ -139,11 +139,14 @@ refuse if an **active** `User` with that email already exists.
   the email already exists).
 - `POST /api/auth/onboarding/verify/` (`AllowAny`) — body: `token`. Marks
   `email_verified_at`, then decides:
-  - **professional domain** → `provision_registration(...)`, return **JWT access/refresh**
-    so the client logs the new admin straight in.
+  - **professional domain** → `provision_registration(...)`, return a success body with
+    `{status: 'provisioned'}` (no tokens). The new admin then signs in manually.
   - **free/disposable domain** → set `status='awaiting_approval'`, return a body indicating
-    "under review" (no tokens).
+    `{status: 'awaiting_approval'}`.
   - Already-verified / invalid / provisioned tokens → appropriate 400.
+
+  Verification never issues JWTs — newly provisioned users are sent to the login page to
+  sign in with the email + password they chose at sign-up.
 
 Existing invite-based `/register` and the password flows are unchanged.
 
@@ -165,7 +168,8 @@ Existing invite-based `/register` and the password flows are unchanged.
     schemas in `lib/schemas.ts`. Submit → `POST auth/onboarding/` → "Check your email to
     verify your account."
 - **`/verify-email?token=`** (public): on load, `POST auth/onboarding/verify/`:
-  - auto-provisioned → store the returned tokens and **redirect to the dashboard**.
+  - provisioned → show "Your account is ready" and **redirect to `/login`** (with a
+    "please sign in" note); no auto-login.
   - awaiting approval → show "Your application is under review — we'll email you when it's
     approved."
   - invalid/expired → error with a link back to `/signup`.
@@ -190,7 +194,8 @@ Existing invite-based `/register` and the password flows are unchanged.
 - **Submit (practice):** creates a `pending_verification` registration; **no** Practice/User
   yet; verification email attempted.
 - **Verify (professional email):** provisions → Practice + active User + Clinician(`admin`);
-  JWT returned; logging in works.
+  response is `{status: 'provisioned'}` with **no tokens**; the user can then log in with
+  their chosen email + password.
 - **Verify (free email):** → `awaiting_approval`; **no** Practice/User created.
 - **Approve (free one) in admin:** provisions.
 - **Reject:** no provisioning; status `rejected`.
