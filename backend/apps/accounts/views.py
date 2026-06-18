@@ -7,7 +7,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .models import Practice, Clinician
 from .scoping import accessible_practice_ids, resolve_practice_scope, scope_queryset
 from rest_framework.exceptions import ValidationError
-from .management import can_manage
+from .management import can_manage, is_last_active_admin
 from .serializers import (
     MeSerializer, PracticeSerializer, PracticeCreateSerializer, ClinicianSerializer,
     ClinicianInviteSerializer, ClinicianManageSerializer, ClinicianRegisterSerializer,
@@ -177,6 +177,17 @@ class ClinicianDetailView(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(ClinicianSerializer(target).data)
+
+    def delete(self, request, pk):
+        target = self._get_target(pk)
+        if not can_manage(request.user, target):
+            raise PermissionDenied()
+        if is_last_active_admin(target):
+            raise ValidationError(
+                'This is the last admin of the practice; assign another admin first.')
+        target.user.is_active = False
+        target.user.save(update_fields=['is_active'])
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class PasswordResetRequestView(generics.GenericAPIView):
