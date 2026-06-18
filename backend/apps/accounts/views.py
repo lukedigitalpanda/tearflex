@@ -1,4 +1,7 @@
 from django.shortcuts import get_object_or_404
+from django.contrib.auth.models import User
+from django.core.mail import send_mail
+from django.conf import settings as django_settings
 from rest_framework import generics, permissions, status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
@@ -12,6 +15,7 @@ from .serializers import (
     MeSerializer, PracticeSerializer, PracticeCreateSerializer, ClinicianSerializer,
     ClinicianInviteSerializer, ClinicianManageSerializer, ClinicianRegisterSerializer,
     PasswordResetRequestSerializer, PasswordResetConfirmSerializer, ChangePasswordSerializer,
+    OnboardingSubmitSerializer,
 )
 from .permissions import IsPracticeAdmin, IsChainAdminOrSuperuser
 
@@ -238,5 +242,37 @@ class ClinicianResetPasswordView(generics.GenericAPIView):
         token = PasswordResetToken.objects.create(user=target.user)
         return Response(
             {'token': token.token, 'reset_url': f"/reset-password?token={token.token}"},
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class OnboardingSubmitView(generics.GenericAPIView):
+    """Public self-onboarding sign-up. Creates a pending registration and emails
+    a verification link."""
+    permission_classes = [permissions.AllowAny]
+    serializer_class = OnboardingSubmitSerializer
+
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['contact_email']
+        # Don't reveal whether an account already exists — generic success, no-op.
+        if not User.objects.filter(email__iexact=email, is_active=True).exists():
+            reg = serializer.save()
+            verify_url = f"{django_settings.FRONTEND_URL}/verify-email?token={reg.email_token}"
+            send_mail(
+                subject='Verify your TearFlex account',
+                message=(
+                    f"Welcome to TearFlex.\n\n"
+                    f"Confirm your email to continue setting up {reg.practice_name}:\n\n"
+                    f"{verify_url}\n\n"
+                    f"If you didn't request this, you can ignore this email."
+                ),
+                from_email=django_settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+                fail_silently=True,
+            )
+        return Response(
+            {'detail': 'Check your email to verify your account.'},
             status=status.HTTP_201_CREATED,
         )

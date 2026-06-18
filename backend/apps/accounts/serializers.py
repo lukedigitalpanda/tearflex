@@ -1,10 +1,11 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
+from django.contrib.auth.hashers import make_password
 from django.core.mail import send_mail
 from django.conf import settings as django_settings
 from django.db import transaction
 from django.utils import timezone
-from .models import Practice, Clinician, ClinicianInvite, PasswordResetToken
+from .models import Practice, Clinician, ClinicianInvite, PasswordResetToken, OnboardingRegistration
 from .management import manageable_roles, can_manage, is_last_active_admin
 from .scoping import accessible_practice_ids
 
@@ -262,3 +263,30 @@ class ChangePasswordSerializer(serializers.Serializer):
         user.set_password(self.validated_data['new_password'])
         user.save()
         return user
+
+
+class OnboardingSubmitSerializer(serializers.Serializer):
+    registration_type = serializers.ChoiceField(choices=['practice', 'chain'])
+    contact_first_name = serializers.CharField(max_length=100)
+    contact_last_name = serializers.CharField(max_length=100)
+    contact_email = serializers.EmailField()
+    contact_title = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    professional_registration = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    password = serializers.CharField(min_length=8, write_only=True)
+    practice_name = serializers.CharField(max_length=255)
+    address_line_1 = serializers.CharField(max_length=255)
+    address_line_2 = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    city = serializers.CharField(max_length=100)
+    postcode = serializers.CharField(max_length=10)
+    phone = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    practice_email = serializers.EmailField(required=False, allow_blank=True)
+    chain_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
+
+    def validate(self, attrs):
+        if attrs['registration_type'] == 'chain' and not attrs.get('chain_name'):
+            raise serializers.ValidationError({'chain_name': 'Required when registering a group / chain.'})
+        return attrs
+
+    def create(self, validated_data):
+        validated_data['password'] = make_password(validated_data['password'])
+        return OnboardingRegistration.objects.create(**validated_data)
