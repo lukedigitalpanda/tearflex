@@ -14,7 +14,8 @@ describe('LoginPage', () => {
   it('renders username, password, and submit', () => {
     renderPage()
     expect(screen.getByLabelText(/username/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument()
+    // Exact 'Password' so we match the input's label, not the "Show password" toggle button.
+    expect(screen.getByLabelText('Password')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument()
   })
 })
