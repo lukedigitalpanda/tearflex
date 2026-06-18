@@ -12,7 +12,7 @@ class Patient(models.Model):
     sex = models.CharField(max_length=10, choices=SEX_CHOICES, blank=True)
     email = models.EmailField(blank=True)
     phone = models.CharField(max_length=20, blank=True)
-    nhs_number = models.CharField(max_length=20, blank=True)
+    nhs_number = models.CharField(max_length=20)
     notes = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
