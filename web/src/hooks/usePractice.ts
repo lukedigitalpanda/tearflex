@@ -59,6 +59,23 @@ export function useInviteClinician() {
   })
 }
 
+export function useUpdateClinician(id: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) =>
+      api.patch<Clinician>(`auth/clinicians/${id}/`, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['clinicians'] }),
+  })
+}
+
+export function useRemoveClinician(id: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.del(`auth/clinicians/${id}/`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['clinicians'] }),
+  })
+}
+
 export function useCreatePractice() {
   const qc = useQueryClient()
   const setSelectedPracticeId = useSession((s) => s.setSelectedPracticeId)
