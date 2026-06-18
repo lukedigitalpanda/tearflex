@@ -110,3 +110,52 @@ class PasswordResetToken(models.Model):
 
     def __str__(self):
         return f'Password reset for {self.user.email}'
+
+
+class OnboardingRegistration(models.Model):
+    """A pending self-onboarding signup. Nothing real (Practice/User/Clinician)
+    exists until provision_registration() runs."""
+    REGISTRATION_TYPES = [('practice', 'Practice'), ('chain', 'Chain')]
+    STATUS_CHOICES = [
+        ('pending_verification', 'Pending email verification'),
+        ('awaiting_approval', 'Awaiting superadmin approval'),
+        ('provisioned', 'Provisioned'),
+        ('rejected', 'Rejected'),
+    ]
+
+    registration_type = models.CharField(max_length=10, choices=REGISTRATION_TYPES)
+
+    contact_first_name = models.CharField(max_length=100)
+    contact_last_name = models.CharField(max_length=100)
+    contact_email = models.EmailField()
+    contact_title = models.CharField(max_length=20, blank=True)
+    professional_registration = models.CharField(max_length=50, blank=True)
+    password = models.CharField(max_length=128)  # hashed via make_password
+
+    practice_name = models.CharField(max_length=255)
+    address_line_1 = models.CharField(max_length=255)
+    address_line_2 = models.CharField(max_length=255, blank=True)
+    city = models.CharField(max_length=100)
+    postcode = models.CharField(max_length=10)
+    phone = models.CharField(max_length=20, blank=True)
+    practice_email = models.EmailField(blank=True)
+
+    chain_name = models.CharField(max_length=255, blank=True)
+
+    email_token = models.CharField(max_length=64, unique=True, blank=True)
+    email_verified_at = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=24, choices=STATUS_CHOICES, default='pending_verification')
+
+    provisioned_practice = models.ForeignKey('Practice', null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    provisioned_clinician = models.ForeignKey('Clinician', null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    decided_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    created_at = models.DateTimeField(auto_now_add=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        if not self.email_token:
+            self.email_token = secrets.token_urlsafe(32)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f'{self.contact_email} → {self.practice_name} ({self.status})'
