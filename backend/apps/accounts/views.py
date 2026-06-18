@@ -11,7 +11,7 @@ from .management import can_manage, is_last_active_admin
 from .serializers import (
     MeSerializer, PracticeSerializer, PracticeCreateSerializer, ClinicianSerializer,
     ClinicianInviteSerializer, ClinicianManageSerializer, ClinicianRegisterSerializer,
-    PasswordResetRequestSerializer, PasswordResetConfirmSerializer,
+    PasswordResetRequestSerializer, PasswordResetConfirmSerializer, ChangePasswordSerializer,
 )
 from .permissions import IsPracticeAdmin, IsChainAdminOrSuperuser
 
@@ -212,3 +212,15 @@ class PasswordResetConfirmView(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response({'detail': 'Password reset successfully.'})
+
+
+class ChangePasswordView(generics.GenericAPIView):
+    """Authenticated user changes their own password."""
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = ChangePasswordSerializer
+
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)

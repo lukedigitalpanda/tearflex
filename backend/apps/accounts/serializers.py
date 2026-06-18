@@ -244,3 +244,21 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         user.save()
         token.used_at = timezone.now()
         token.save()
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    """Authenticated self-service password change. Requires the current password."""
+    current_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(write_only=True, min_length=8)
+
+    def validate_current_password(self, value):
+        user = self.context['request'].user
+        if not user.check_password(value):
+            raise serializers.ValidationError('Current password is incorrect.')
+        return value
+
+    def save(self):
+        user = self.context['request'].user
+        user.set_password(self.validated_data['new_password'])
+        user.save()
+        return user
