@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { usePatients } from '@/hooks/usePatients'
+import { useDebounce } from '@/hooks/useDebounce'
 import { PatientList } from '@/components/patients/PatientList'
 import { NewPatientDialog } from '@/components/patients/NewPatientDialog'
 import { LoadingState } from '@/components/common/LoadingState'
@@ -8,7 +9,8 @@ import { Input } from '@/components/ui/input'
 
 export default function PatientsPage() {
   const [search, setSearch] = useState('')
-  const { data, isLoading } = usePatients(search)
+  const debouncedSearch = useDebounce(search, 250)
+  const { data, isLoading } = usePatients(debouncedSearch)
 
   return (
     <div className="space-y-4">
