@@ -124,20 +124,25 @@ class ClinicianInviteView(generics.GenericAPIView):
     serializer_class = ClinicianInviteSerializer
 
     def post(self, request):
-        clinician = request.user.clinician
+        inviter = request.user.clinician
+        requested = request.query_params.get('practice_id')
+        if requested:
+            scope = resolve_practice_scope(request.user, requested)
+            if not scope:
+                raise PermissionDenied()
+            practice = get_object_or_404(Practice, pk=next(iter(scope)))
+        else:
+            practice = inviter.practice
         serializer = self.get_serializer(
             data=request.data,
-            context={'practice': clinician.practice, 'invited_by': clinician},
+            context={'practice': practice, 'invited_by': inviter, 'actor_user': request.user},
         )
         serializer.is_valid(raise_exception=True)
         invite = serializer.save()
         return Response(
             {
-                'id': invite.id,
-                'email': invite.email,
-                'role': invite.role,
-                'token': invite.token,
-                'invite_url': f"/register?token={invite.token}",
+                'id': invite.id, 'email': invite.email, 'role': invite.role,
+                'token': invite.token, 'invite_url': f"/register?token={invite.token}",
             },
             status=status.HTTP_201_CREATED,
         )

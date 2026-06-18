@@ -5,6 +5,7 @@ from django.conf import settings as django_settings
 from django.db import transaction
 from django.utils import timezone
 from .models import Practice, Clinician, ClinicianInvite, PasswordResetToken
+from .management import manageable_roles
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -64,6 +65,13 @@ class ClinicianInviteSerializer(serializers.Serializer):
             raise serializers.ValidationError('A clinician with this email is already registered.')
         # Inactive user = pending unaccepted invite; allow re-invite (cleaned up in create)
         return value
+
+    def validate(self, attrs):
+        role = attrs.get('role', 'clinician')
+        if role not in manageable_roles(self.context['actor_user']):
+            raise serializers.ValidationError(
+                {'role': 'You do not have permission to invite this role.'})
+        return attrs
 
     @transaction.atomic
     def create(self, validated_data):
