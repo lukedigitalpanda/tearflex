@@ -7,6 +7,7 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.db import transaction
 from django.utils import timezone
 from .models import Practice, Clinician, PasswordResetToken, OnboardingRegistration
 from .scoping import accessible_practice_ids, resolve_practice_scope, scope_queryset
@@ -288,24 +289,27 @@ class OnboardingVerifyView(generics.GenericAPIView):
 
     def post(self, request):
         token = request.data.get('token', '')
-        try:
-            reg = OnboardingRegistration.objects.get(email_token=token)
-        except OnboardingRegistration.DoesNotExist:
-            raise ValidationError('Invalid or expired verification link.')
-        if reg.status == 'provisioned':
-            raise ValidationError('This account has already been set up. Please sign in.')
-        if reg.status == 'rejected':
-            raise ValidationError('This application was not approved.')
+        if not token:
+            raise ValidationError('A verification token is required.')
+        with transaction.atomic():
+            try:
+                reg = OnboardingRegistration.objects.select_for_update().get(email_token=token)
+            except OnboardingRegistration.DoesNotExist:
+                raise ValidationError('Invalid or expired verification link.')
+            if reg.status == 'provisioned':
+                raise ValidationError('This account has already been set up. Please sign in.')
+            if reg.status == 'rejected':
+                raise ValidationError('This application was not approved.')
 
-        if reg.email_verified_at is None:
-            reg.email_verified_at = timezone.now()
-            reg.save(update_fields=['email_verified_at'])
+            if reg.email_verified_at is None:
+                reg.email_verified_at = timezone.now()
+                reg.save(update_fields=['email_verified_at'])
 
-        if reg.status == 'awaiting_approval' or is_free_or_disposable(reg.contact_email):
-            if reg.status != 'awaiting_approval':
-                reg.status = 'awaiting_approval'
-                reg.save(update_fields=['status'])
-            return Response({'status': 'awaiting_approval'})
+            if reg.status == 'awaiting_approval' or is_free_or_disposable(reg.contact_email):
+                if reg.status != 'awaiting_approval':
+                    reg.status = 'awaiting_approval'
+                    reg.save(update_fields=['status'])
+                return Response({'status': 'awaiting_approval'})
 
-        provision_registration(reg)
-        return Response({'status': 'provisioned'})
+            provision_registration(reg)
+            return Response({'status': 'provisioned'})
