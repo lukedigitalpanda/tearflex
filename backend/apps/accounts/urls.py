@@ -11,4 +11,7 @@ urlpatterns = [
     path('practice/', views.PracticeView.as_view(), name='practice'),
     path('practice/clinicians/', views.PracticeClinicianListView.as_view(), name='practice-clinicians'),
     path('practice/clinicians/invite/', views.ClinicianInviteView.as_view(), name='clinician-invite'),
+    path('clinicians/<int:pk>/', views.ClinicianDetailView.as_view(), name='clinician-detail'),
+    path('password-reset/', views.PasswordResetRequestView.as_view(), name='password-reset-request'),
+    path('password-reset/confirm/', views.PasswordResetConfirmView.as_view(), name='password-reset-confirm'),
 ]

@@ -7,9 +7,10 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .models import Practice, Clinician
 from .scoping import accessible_practice_ids, resolve_practice_scope, scope_queryset
 from rest_framework.exceptions import ValidationError
+from .management import can_manage
 from .serializers import (
     MeSerializer, PracticeSerializer, PracticeCreateSerializer, ClinicianSerializer,
-    ClinicianInviteSerializer, ClinicianRegisterSerializer,
+    ClinicianInviteSerializer, ClinicianManageSerializer, ClinicianRegisterSerializer,
     PasswordResetRequestSerializer, PasswordResetConfirmSerializer,
 )
 from .permissions import IsPracticeAdmin, IsChainAdminOrSuperuser
@@ -111,7 +112,8 @@ class PracticeClinicianListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        base = Clinician.objects.select_related('user', 'practice').filter(user__is_superuser=False)
+        base = Clinician.objects.select_related('user', 'practice').filter(
+            user__is_superuser=False, user__is_active=True)
         return scope_queryset(
             base, self.request.user, 'practice',
             self.request.query_params.get('practice_id'),
@@ -146,6 +148,35 @@ class ClinicianInviteView(generics.GenericAPIView):
             },
             status=status.HTTP_201_CREATED,
         )
+
+
+class ClinicianDetailView(generics.GenericAPIView):
+    """Retrieve / edit / remove a single clinician, gated by management tier."""
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = ClinicianManageSerializer
+
+    def _get_target(self, pk):
+        return get_object_or_404(
+            Clinician.objects.select_related('user', 'practice'), pk=pk)
+
+    def get(self, request, pk):
+        target = self._get_target(pk)
+        scope = accessible_practice_ids(request.user)
+        if scope is not None and target.practice_id not in scope:
+            raise PermissionDenied()
+        return Response(ClinicianSerializer(target).data)
+
+    def patch(self, request, pk):
+        target = self._get_target(pk)
+        if not can_manage(request.user, target):
+            raise PermissionDenied()
+        serializer = self.get_serializer(
+            data=request.data,
+            context={'actor_user': request.user, 'target': target},
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(ClinicianSerializer(target).data)
 
 
 class PasswordResetRequestView(generics.GenericAPIView):

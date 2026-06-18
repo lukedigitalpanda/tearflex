@@ -5,7 +5,8 @@ from django.conf import settings as django_settings
 from django.db import transaction
 from django.utils import timezone
 from .models import Practice, Clinician, ClinicianInvite, PasswordResetToken
-from .management import manageable_roles
+from .management import manageable_roles, can_manage, is_last_active_admin
+from .scoping import accessible_practice_ids
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -112,6 +113,56 @@ class ClinicianInviteSerializer(serializers.Serializer):
             role=validated_data['role'], invited_by=invited_by, clinician=clinician,
         )
         return invite
+
+
+class ClinicianManageSerializer(serializers.Serializer):
+    """Edit a clinician's details, role, and/or practice (move). Caller provides
+    `actor_user` and `target` (the Clinician) in context."""
+    first_name = serializers.CharField(max_length=150, required=False)
+    last_name = serializers.CharField(max_length=150, required=False)
+    title = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    professional_registration = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    role = serializers.ChoiceField(choices=Clinician.ROLE_CHOICES, required=False)
+    practice_id = serializers.IntegerField(required=False)
+
+    def validate_role(self, value):
+        if value not in manageable_roles(self.context['actor_user']):
+            raise serializers.ValidationError('You cannot assign this role.')
+        return value
+
+    def validate_practice_id(self, value):
+        scope = accessible_practice_ids(self.context['actor_user'])
+        if scope is not None and value not in scope:
+            raise serializers.ValidationError('That practice is outside your scope.')
+        return value
+
+    def validate(self, attrs):
+        target = self.context['target']
+        new_role = attrs.get('role', target.role)
+        new_practice = attrs.get('practice_id', target.practice_id)
+        leaving_admin = target.role == 'admin' and (
+            new_role != 'admin' or new_practice != target.practice_id)
+        if leaving_admin and is_last_active_admin(target):
+            raise serializers.ValidationError(
+                'This is the last admin of the practice; assign another admin first.')
+        return attrs
+
+    def save(self):
+        target = self.context['target']
+        data = self.validated_data
+        user = target.user
+        if 'first_name' in data:
+            user.first_name = data['first_name']
+        if 'last_name' in data:
+            user.last_name = data['last_name']
+        user.save()
+        for field in ('title', 'professional_registration', 'role'):
+            if field in data:
+                setattr(target, field, data[field])
+        if 'practice_id' in data:
+            target.practice_id = data['practice_id']
+        target.save()
+        return target
 
 
 class ClinicianRegisterSerializer(serializers.Serializer):
