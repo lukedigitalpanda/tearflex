@@ -12,6 +12,7 @@ urlpatterns = [
     path('practice/clinicians/', views.PracticeClinicianListView.as_view(), name='practice-clinicians'),
     path('practice/clinicians/invite/', views.ClinicianInviteView.as_view(), name='clinician-invite'),
     path('clinicians/<int:pk>/', views.ClinicianDetailView.as_view(), name='clinician-detail'),
+    path('clinicians/<int:pk>/reset-password/', views.ClinicianResetPasswordView.as_view(), name='clinician-reset-password'),
     path('password-reset/', views.PasswordResetRequestView.as_view(), name='password-reset-request'),
     path('password-reset/confirm/', views.PasswordResetConfirmView.as_view(), name='password-reset-confirm'),
     path('password/change/', views.ChangePasswordView.as_view(), name='password-change'),

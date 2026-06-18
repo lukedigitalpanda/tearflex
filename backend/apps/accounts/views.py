@@ -4,7 +4,7 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import Practice, Clinician
+from .models import Practice, Clinician, PasswordResetToken
 from .scoping import accessible_practice_ids, resolve_practice_scope, scope_queryset
 from rest_framework.exceptions import ValidationError
 from .management import can_manage, is_last_active_admin
@@ -224,3 +224,19 @@ class ChangePasswordView(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ClinicianResetPasswordView(generics.GenericAPIView):
+    """Admin mints a one-time password-reset link for a user they manage."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        target = get_object_or_404(Clinician.objects.select_related('user'), pk=pk)
+        if not can_manage(request.user, target):
+            raise PermissionDenied()
+        PasswordResetToken.objects.filter(user=target.user, used_at__isnull=True).delete()
+        token = PasswordResetToken.objects.create(user=target.user)
+        return Response(
+            {'token': token.token, 'reset_url': f"/reset-password?token={token.token}"},
+            status=status.HTTP_201_CREATED,
+        )
