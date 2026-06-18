@@ -28,3 +28,6 @@ pgdata/
 
 # Production env files (contain secrets)
 *.env.prod
+
+# Superpowers brainstorm artifacts (local only)
+.superpowers/
