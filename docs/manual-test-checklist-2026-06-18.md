@@ -105,3 +105,48 @@ admin as superadmin):
 
 - [ ] `./deploy.sh` on the VPS rebuilds, applies migrations, and reports
       "✔ Deploy complete — web is serving (HTTP 200)." (Already exercised this session.)
+
+## 11. Self-onboarding (public sign-up)
+
+> Email delivery is not wired up yet (SendGrid), so the verification email goes to the
+> backend logs, not an inbox. To get the verify link during testing:
+> `docker compose -f docker-compose.prod.yml logs backend | grep verify-email`
+
+**Reaching the page (public routes):**
+- [ ] While **logged out**, `/signup` loads (is NOT redirected to `/login`).
+- [ ] While **logged out**, `/verify-email` loads.
+- [ ] A protected route (e.g. `/patients`) while logged out still **redirects to `/login`**.
+
+**Practice path — professional email (auto-approve):**
+- [ ] `/signup` → choose **single practice** → fill the form with a **work-domain** email
+      (not gmail/outlook) → submit → see "Check your email".
+- [ ] No practice/user exists yet (nothing provisioned before verification).
+- [ ] Open the verify link (from logs) → "Your account is ready" → redirected to `/login`.
+- [ ] Sign in with the email + password you chose → you're in, as a **practice admin** of the
+      new practice.
+
+**Chain path — professional email:**
+- [ ] `/signup` → choose **multi-practice group (chain)** → the **group/chain name** field is
+      required → fill + submit → verify (professional email) → provisioned.
+- [ ] Sign in → you're a **chain admin**; your chain contains the practice you registered;
+      you can switch practices (just the one for now) and create more.
+
+**Free / consumer email (held for approval):**
+- [ ] `/signup` with a **gmail/outlook/yahoo** address → submit → verify → see
+      "Under review" (NOT logged in, nothing provisioned).
+- [ ] In **Django admin → Onboarding registrations**, the row shows **awaiting approval**;
+      no Practice/User was created for it.
+- [ ] Select it → **Approve** action → it provisions (Practice + admin created); the person
+      can now sign in.
+- [ ] Try the **Reject** action on another awaiting row → status becomes **rejected**, nothing
+      provisioned.
+
+**Abuse / duplicate guards:**
+- [ ] Sign up with an email that **already has an account** (active or a pending invite) →
+      you still get a generic "check your email" (no hint the account exists), and **no**
+      duplicate registration/account is created.
+- [ ] Re-clicking an already-used verify link → shows an error (no double-provisioning).
+
+**Classifier sanity:**
+- [ ] A throwaway/disposable domain (e.g. `mailinator.com`) is treated like a free email
+      (→ under review), not auto-provisioned.
