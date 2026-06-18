@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useUpdateClinician, useRemoveClinician, usePractices } from '@/hooks/usePractice'
+import { useUpdateClinician, useRemoveClinician, usePractices, useResetClinicianPassword } from '@/hooks/usePractice'
 import { useMe } from '@/hooks/useAuth'
 import { manageableRoles, canSwitchPractice } from '@/hooks/useRole'
 import type { Clinician } from '@shared/types/user'
@@ -18,6 +18,10 @@ export function ManageClinicianDialog({ clinician }: { clinician: Clinician }) {
   const { data: me } = useMe()
   const update = useUpdateClinician(clinician.id)
   const remove = useRemoveClinician(clinician.id)
+  const resetPw = useResetClinicianPassword(clinician.id)
+  const [resetUrl, setResetUrl] = useState<string | null>(null)
+  const onResetPassword = () =>
+    resetPw.mutate(undefined, { onSuccess: (d) => setResetUrl(d.reset_url) })
   const { data: practices } = usePractices()
   const roles = manageableRoles(me).filter((r) => r !== 'chain_admin')
   const canMove = canSwitchPractice(me)
@@ -76,6 +80,18 @@ export function ManageClinicianDialog({ clinician }: { clinician: Clinician }) {
             </div>
           )}
           {(update.isError || remove.isError) && <p className="text-xs text-status-severe">Action failed. Please try again.</p>}
+          <div className="rounded-md border border-border p-3">
+            {resetUrl ? (
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Share this one-time reset link:</p>
+                <Input readOnly value={resetUrl} onFocus={(e) => e.currentTarget.select()} />
+              </div>
+            ) : (
+              <Button type="button" variant="outline" size="sm" onClick={onResetPassword} disabled={resetPw.isPending}>
+                {resetPw.isPending ? 'Generating…' : 'Reset password'}
+              </Button>
+            )}
+          </div>
           <div className="flex items-center justify-between pt-1">
             <Button variant="outline" size="sm" className="text-status-severe" onClick={onRemove} disabled={remove.isPending}>Remove</Button>
             <Button className="bg-teal-600 hover:bg-teal-700" onClick={onSave} disabled={update.isPending}>

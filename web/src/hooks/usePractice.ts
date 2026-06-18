@@ -76,6 +76,13 @@ export function useRemoveClinician(id: number) {
   })
 }
 
+export function useResetClinicianPassword(id: number) {
+  return useMutation({
+    mutationFn: () =>
+      api.post<{ token: string; reset_url: string }>(`auth/clinicians/${id}/reset-password/`, {}),
+  })
+}
+
 export function useCreatePractice() {
   const qc = useQueryClient()
   const setSelectedPracticeId = useSession((s) => s.setSelectedPracticeId)
