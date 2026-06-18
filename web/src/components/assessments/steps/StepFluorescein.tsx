@@ -26,13 +26,13 @@ export function StepFluorescein({ defaultValues, onNext, onBack }: Props) {
     <form onSubmit={handleSubmit((d) => onNext(d))} className="space-y-5">
       <div>
         <Label>Grade — Oxford scale (0–5)</Label>
-        <div className="mt-2 flex flex-wrap gap-2">
+        <div className="mt-2 flex flex-col gap-1.5">
           {OXFORD_LABELS.map((label, i) => (
             <button
               key={i}
               type="button"
               onClick={() => setValue('fluorescein_grade', grade === i ? undefined : i, { shouldValidate: true })}
-              className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
+              className={`rounded-md border px-3 py-2 text-left text-xs font-medium transition-colors ${
                 grade === i
                   ? 'border-teal-600 bg-teal-50 text-teal-700'
                   : 'border-border hover:border-teal-300'

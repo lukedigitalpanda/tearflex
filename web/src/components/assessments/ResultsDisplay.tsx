@@ -3,6 +3,14 @@ import { TearFilmHeatmap } from './TearFilmHeatmap'
 import { Card } from '@/components/ui/card'
 import type { TestResult } from '@shared/types/assessment'
 
+const OXFORD_LABELS: Record<number, string> = {
+  0: 'Absent', 1: 'Minimal', 2: 'Mild', 3: 'Moderate', 4: 'Marked', 5: 'Severe',
+}
+
+const GUILLON_LABELS: Record<number, string> = {
+  1: 'Open meshwork', 2: 'Closed meshwork', 3: 'Wave / flow', 4: 'Amorphous', 5: 'Coloured fringes',
+}
+
 function Metric({ label, value }: { label: string; value: string }) {
   return (
     <div>
@@ -16,6 +24,14 @@ export function ResultsDisplay({ result, thresholds }: { result: TestResult; thr
   const band = nibutBand(result.nibut_first_breakup_seconds, thresholds)
   const sev = severityMeta(result.dry_eye_severity)
 
+  const fluoresceinValue = result.fluorescein_grade != null
+    ? `${result.fluorescein_grade} — ${OXFORD_LABELS[result.fluorescein_grade] ?? ''}`
+    : 'Not assessed'
+
+  const lipidValue = result.lipid_grade != null
+    ? `${result.lipid_grade} — ${GUILLON_LABELS[result.lipid_grade] ?? ''}`
+    : 'Not assessed'
+
   return (
     <div className="space-y-4">
       <Card className="p-6" style={{ backgroundColor: `${band.color}18` }}>
@@ -28,8 +44,8 @@ export function ResultsDisplay({ result, thresholds }: { result: TestResult; thr
 
       <Card className="grid grid-cols-2 gap-4 p-5 sm:grid-cols-3">
         <Metric label="NIBUT mean" value={result.nibut_mean_breakup_seconds != null ? `${result.nibut_mean_breakup_seconds.toFixed(1)}s` : 'Not assessed'} />
-        <Metric label="Fluorescein grade" value={result.fluorescein_grade != null ? String(result.fluorescein_grade) : 'Not assessed'} />
-        <Metric label="Lipid grade" value={result.lipid_grade != null ? String(result.lipid_grade) : 'Not assessed'} />
+        <Metric label="Fluorescein grade" value={fluoresceinValue} />
+        <Metric label="Lipid grade" value={lipidValue} />
         <Metric label="Tear meniscus" value={result.tear_meniscus_height_mm != null ? `${result.tear_meniscus_height_mm}mm` : 'Not assessed'} />
         <Metric label="Confidence" value={result.confidence_score != null ? `${Math.round(result.confidence_score * 100)}%` : 'Not assessed'} />
       </Card>
