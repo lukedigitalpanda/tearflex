@@ -6,12 +6,13 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import Practice, Clinician
 from .scoping import accessible_practice_ids, resolve_practice_scope, scope_queryset
+from rest_framework.exceptions import ValidationError
 from .serializers import (
-    MeSerializer, PracticeSerializer, ClinicianSerializer,
+    MeSerializer, PracticeSerializer, PracticeCreateSerializer, ClinicianSerializer,
     ClinicianInviteSerializer, ClinicianRegisterSerializer,
     PasswordResetRequestSerializer, PasswordResetConfirmSerializer,
 )
-from .permissions import IsPracticeAdmin
+from .permissions import IsPracticeAdmin, IsChainAdminOrSuperuser
 
 
 class RegisterView(generics.GenericAPIView):
@@ -51,12 +52,23 @@ class MeView(APIView):
         })
 
 
-class PracticeListView(generics.ListAPIView):
+class PracticeListView(generics.ListCreateAPIView):
     """List the practices the user may switch between (all for superadmins, the
-    chain's practices for chain admins). Pagination disabled (dropdown use)."""
-    serializer_class = PracticeSerializer
+    chain's practices for chain admins; pagination disabled for dropdown use).
+    POST creates a practice (chain admins → force-joined to their chain;
+    superusers → no chain)."""
     permission_classes = [permissions.IsAuthenticated]
     pagination_class = None
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return PracticeCreateSerializer
+        return PracticeSerializer
+
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            return [permissions.IsAuthenticated(), IsChainAdminOrSuperuser()]
+        return [permissions.IsAuthenticated()]
 
     def get_queryset(self):
         qs = Practice.objects.filter(is_active=True).order_by('name')
@@ -64,6 +76,18 @@ class PracticeListView(generics.ListAPIView):
         if scope is None:
             return qs
         return qs.filter(id__in=scope)
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        if user.is_superuser:
+            serializer.save()
+            return
+        chain = user.clinician.practice.chain
+        if chain is None:
+            raise ValidationError(
+                'Your practice is not part of a chain, so you cannot create practices.'
+            )
+        serializer.save(chain=chain)
 
 
 class PracticeView(generics.RetrieveUpdateAPIView):
