@@ -47,6 +47,27 @@ export const resetPasswordSchema = z.object({
 })
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>
 
+export const changePasswordSchema = z.object({
+  current_password: z.string().min(1, 'Required'),
+  new_password: z.string().min(8, 'Password must be at least 8 characters'),
+  confirm_password: z.string(),
+}).refine((v) => v.new_password === v.confirm_password, {
+  message: 'Passwords do not match',
+  path: ['confirm_password'],
+})
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>
+
+export const practiceSchema = z.object({
+  name: z.string().min(1, 'Required'),
+  address_line_1: z.string().min(1, 'Required'),
+  address_line_2: z.string().optional(),
+  city: z.string().min(1, 'Required'),
+  postcode: z.string().min(1, 'Required'),
+  phone: z.string().optional(),
+  email: z.string().email('Enter a valid email address').optional().or(z.literal('')),
+})
+export type PracticeInput = z.infer<typeof practiceSchema>
+
 export const inviteSchema = z.object({
   email: z.string().email(),
   first_name: z.string().min(1, 'Required'),

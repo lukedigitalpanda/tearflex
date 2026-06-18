@@ -56,6 +56,13 @@ export function useResetPassword() {
   })
 }
 
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: (data: { current_password: string; new_password: string }) =>
+      api.post('auth/password/change/', data),
+  })
+}
+
 export function useLogout() {
   const qc = useQueryClient()
   const setMe = useSession((s) => s.setMe)

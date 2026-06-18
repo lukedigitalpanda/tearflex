@@ -7,6 +7,7 @@ import { canSwitchPractice } from '@/hooks/useRole'
 import { ThresholdForm } from '@/components/settings/ThresholdForm'
 import { EditPracticeDialog } from '@/components/settings/EditPracticeDialog'
 import { CreatePracticeDialog } from '@/components/settings/CreatePracticeDialog'
+import { ChangePasswordDialog } from '@/components/settings/ChangePasswordDialog'
 import { Card } from '@/components/ui/card'
 
 export default function SettingsPage() {
@@ -52,6 +53,13 @@ export default function SettingsPage() {
       <Card className="p-5">
         <h2 className="mb-3 font-semibold">Clinical thresholds</h2>
         <ThresholdForm />
+      </Card>
+      <Card className="flex items-center justify-between p-5">
+        <div>
+          <span className="font-semibold">Password</span>
+          <p className="text-xs text-muted-foreground">Change the password for your account.</p>
+        </div>
+        <ChangePasswordDialog />
       </Card>
       {isAdmin && (
         <Card className="flex items-center justify-between p-5">
