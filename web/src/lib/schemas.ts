@@ -76,6 +76,26 @@ export const inviteSchema = z.object({
 })
 export type InviteInput = z.infer<typeof inviteSchema>
 
+// registration_type is a UI choice (component state), added to the payload at
+// submit — not a form field. chain_name is validated in the component + backend.
+export const onboardingSchema = z.object({
+  chain_name: z.string().optional(),
+  practice_name: z.string().min(1, 'Required'),
+  address_line_1: z.string().min(1, 'Required'),
+  address_line_2: z.string().optional(),
+  city: z.string().min(1, 'Required'),
+  postcode: z.string().min(1, 'Required'),
+  phone: z.string().optional(),
+  practice_email: z.string().email().optional().or(z.literal('')),
+  contact_first_name: z.string().min(1, 'Required'),
+  contact_last_name: z.string().min(1, 'Required'),
+  contact_email: z.string().email('Enter a valid email'),
+  contact_title: z.string().optional(),
+  professional_registration: z.string().optional(),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+})
+export type OnboardingInput = z.infer<typeof onboardingSchema>
+
 // ─── Assessment creation stepper schemas ───────────────────────────────────
 
 const optPosNum = (max = 60) =>

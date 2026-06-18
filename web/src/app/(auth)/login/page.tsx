@@ -80,6 +80,9 @@ export default function LoginPage() {
             {login.isPending ? 'Signing in…' : 'Sign in'}
           </Button>
         </form>
+        <p className="text-center text-sm text-muted-foreground">
+          New practice? <Link href="/signup" className="text-teal-600 hover:underline">Create an account</Link>
+        </p>
       </Card>
     </div>
   )
