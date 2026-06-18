@@ -7,15 +7,25 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { inviteSchema, type InviteInput } from '@/lib/schemas'
-import { useInviteClinician } from '@/hooks/usePractice'
+import { useInviteClinician, usePractice } from '@/hooks/usePractice'
+import { useMe } from '@/hooks/useAuth'
+import { manageableRoles, canSwitchPractice } from '@/hooks/useRole'
 import type { ClinicianInviteResult } from '@shared/types/api'
+
+const ROLE_LABELS: Record<string, string> = {
+  admin: 'Practice Admin', clinician: 'Clinician', technician: 'Technician',
+}
 
 export function InviteClinicianDialog() {
   const [open, setOpen] = useState(false)
   const [result, setResult] = useState<ClinicianInviteResult | null>(null)
   const invite = useInviteClinician()
+  const { data: me } = useMe()
+  const roles = manageableRoles(me).filter((r) => r !== 'chain_admin')
+  const { data: selectedPractice } = usePractice()
+  const showTarget = canSwitchPractice(me)
   const { register, handleSubmit, reset, watch } = useForm<InviteInput>({
-    resolver: zodResolver(inviteSchema), defaultValues: { role: 'clinician' },
+    resolver: zodResolver(inviteSchema), defaultValues: { role: roles[0] ?? 'clinician' },
   })
 
   const values = watch()
@@ -39,12 +49,15 @@ export function InviteClinicianDialog() {
               <div><Label htmlFor="iln">Last name {!values.last_name && <span className="text-xs text-red-500">* required</span>}</Label><Input id="iln" {...register('last_name')} /></div>
             </div>
             <div><Label htmlFor="iem">Email {!values.email && <span className="text-xs text-red-500">* required</span>}</Label><Input id="iem" type="email" {...register('email')} /></div>
+            {showTarget && (
+              <p className="text-xs text-muted-foreground">
+                Inviting to: <span className="font-medium">{selectedPractice?.name ?? '…'}</span>
+              </p>
+            )}
             <div>
               <Label htmlFor="irole">Role</Label>
               <select id="irole" {...register('role')} className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm text-foreground">
-                <option value="clinician">Clinician</option>
-                <option value="technician">Technician</option>
-                <option value="admin">Practice Admin</option>
+                {roles.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
               </select>
             </div>
             {invite.isError && <p className="text-sm text-status-severe">Could not create invite.</p>}

@@ -5,6 +5,7 @@ import { useSession } from '@/store/session'
 import { canSwitchPractice } from '@/hooks/useRole'
 import type { Clinician, Practice } from '@shared/types/user'
 import type { ClinicianInviteResult, Paginated } from '@shared/types/api'
+import type { PracticeInput } from '@/lib/schemas'
 
 export function usePractices() {
   const me = useSession((s) => s.me)
@@ -48,9 +49,25 @@ export function useClinicians() {
 
 export function useInviteClinician() {
   const qc = useQueryClient()
+  const me = useSession((s) => s.me)
+  const selectedPracticeId = useSession((s) => s.selectedPracticeId)
+  const suffix = canSwitchPractice(me) && selectedPracticeId ? `?practice_id=${selectedPracticeId}` : ''
   return useMutation({
     mutationFn: (data: { email: string; first_name: string; last_name: string; role: string }) =>
-      api.post<ClinicianInviteResult>('auth/practice/clinicians/invite/', data),
+      api.post<ClinicianInviteResult>(`auth/practice/clinicians/invite/${suffix}`, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['clinicians'] }),
+  })
+}
+
+export function useCreatePractice() {
+  const qc = useQueryClient()
+  const setSelectedPracticeId = useSession((s) => s.setSelectedPracticeId)
+  return useMutation({
+    mutationFn: (data: PracticeInput) => api.post<Practice>('auth/practices/', data),
+    onSuccess: (created) => {
+      qc.invalidateQueries({ queryKey: ['practices'] })
+      setSelectedPracticeId(created.id)
+      qc.invalidateQueries({ queryKey: ['practice'] })
+    },
   })
 }

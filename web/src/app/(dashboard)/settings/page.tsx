@@ -2,13 +2,18 @@
 import Link from 'next/link'
 import { usePractice } from '@/hooks/usePractice'
 import { useIsAdmin } from '@/hooks/useRole'
+import { useMe } from '@/hooks/useAuth'
+import { canSwitchPractice } from '@/hooks/useRole'
 import { ThresholdForm } from '@/components/settings/ThresholdForm'
 import { EditPracticeDialog } from '@/components/settings/EditPracticeDialog'
+import { CreatePracticeDialog } from '@/components/settings/CreatePracticeDialog'
 import { Card } from '@/components/ui/card'
 
 export default function SettingsPage() {
   const { data: practice, isLoading } = usePractice()
   const isAdmin = useIsAdmin()
+  const { data: me } = useMe()
+  const canCreatePractice = canSwitchPractice(me)  // superusers + chain admins
 
   const address = practice
     ? [practice.address_line_1, practice.address_line_2, practice.city, practice.postcode].filter(Boolean).join(', ')
@@ -35,6 +40,15 @@ export default function SettingsPage() {
           </div>
         )}
       </Card>
+      {canCreatePractice && (
+        <Card className="flex items-center justify-between p-5">
+          <div>
+            <span className="font-semibold">Practices</span>
+            <p className="text-xs text-muted-foreground">Create a new practice in your chain.</p>
+          </div>
+          <CreatePracticeDialog />
+        </Card>
+      )}
       <Card className="p-5">
         <h2 className="mb-3 font-semibold">Clinical thresholds</h2>
         <ThresholdForm />
