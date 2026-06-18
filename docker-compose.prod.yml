@@ -22,6 +22,8 @@ services:
     env_file: ./backend/.env.prod
     environment:
       DJANGO_SETTINGS_MODULE: tearflex.settings.prod
+    ports:
+      - "8005:8000"
     volumes:
       - media:/app/media
     depends_on:
