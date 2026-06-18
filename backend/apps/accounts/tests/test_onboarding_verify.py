@@ -69,3 +69,22 @@ def test_already_provisioned_token_400_no_double_provision():
     resp = APIClient().post(URL, {'token': reg.email_token}, format='json')
     assert resp.status_code == 400
     assert User.objects.filter(email='jo@my-clinic.co.uk').count() == 1
+
+
+@pytest.mark.django_db
+def test_verify_blocked_when_inactive_user_has_same_email():
+    """provision_registration must refuse (400, not 500) when an INACTIVE user
+    already holds the registration email — e.g. a pending clinician invite."""
+    reg = _reg(contact_email='jo@my-clinic.co.uk')
+    # Simulate an existing inactive user (e.g. a pending invite) with the same email.
+    inactive = User.objects.create_user(
+        'existing_invite', email='jo@my-clinic.co.uk', password='x', is_active=False
+    )
+    resp = APIClient().post(URL, {'token': reg.email_token}, format='json')
+    assert resp.status_code == 400  # provision refused, not a 500
+    # No new active user or practice should have been created.
+    assert User.objects.filter(email='jo@my-clinic.co.uk', is_active=True).count() == 0
+    assert Practice.objects.filter(name='My Clinic').count() == 0
+    # The pre-existing inactive user remains untouched.
+    inactive.refresh_from_db()
+    assert not inactive.is_active

@@ -16,8 +16,8 @@ def provision_registration(registration, decided_by=None):
     """Materialise the Chain/Practice/User/Clinician for a verified registration."""
     if registration.status == 'provisioned':
         raise OnboardingError('This registration has already been provisioned.')
-    if User.objects.filter(email__iexact=registration.contact_email, is_active=True).exists():
-        raise OnboardingError('An active account already exists for this email.')
+    if User.objects.filter(email__iexact=registration.contact_email).exists():
+        raise OnboardingError('An account already exists for this email.')
 
     chain = None
     if registration.registration_type == 'chain':

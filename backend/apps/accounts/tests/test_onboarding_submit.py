@@ -48,3 +48,12 @@ def test_existing_active_user_email_is_generic_success_no_registration():
     resp = APIClient().post(URL, _practice_payload(contact_email='taken@my-clinic.co.uk'), format='json')
     assert resp.status_code == 201  # no leak
     assert OnboardingRegistration.objects.filter(contact_email='taken@my-clinic.co.uk').count() == 0
+
+
+@pytest.mark.django_db
+def test_existing_inactive_user_email_is_generic_success_no_registration():
+    """An INACTIVE user (e.g. a pending invite) must also block a new registration."""
+    User.objects.create_user('u', email='taken@my-clinic.co.uk', password='x', is_active=False)
+    resp = APIClient().post(URL, _practice_payload(contact_email='taken@my-clinic.co.uk'), format='json')
+    assert resp.status_code == 201  # generic success, no leak
+    assert OnboardingRegistration.objects.filter(contact_email='taken@my-clinic.co.uk').count() == 0

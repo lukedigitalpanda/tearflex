@@ -14,7 +14,7 @@ from .scoping import accessible_practice_ids, resolve_practice_scope, scope_quer
 from rest_framework.exceptions import ValidationError
 from .management import can_manage, is_last_active_admin
 from .email_classification import is_free_or_disposable
-from .onboarding import provision_registration
+from .onboarding import provision_registration, OnboardingError
 from .serializers import (
     MeSerializer, PracticeSerializer, PracticeCreateSerializer, ClinicianSerializer,
     ClinicianInviteSerializer, ClinicianManageSerializer, ClinicianRegisterSerializer,
@@ -261,7 +261,7 @@ class OnboardingSubmitView(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
         email = serializer.validated_data['contact_email']
         # Don't reveal whether an account already exists — generic success, no-op.
-        if not User.objects.filter(email__iexact=email, is_active=True).exists():
+        if not User.objects.filter(email__iexact=email).exists():
             reg = serializer.save()
             verify_url = f"{django_settings.FRONTEND_URL}/verify-email?token={reg.email_token}"
             send_mail(
@@ -311,5 +311,8 @@ class OnboardingVerifyView(generics.GenericAPIView):
                     reg.save(update_fields=['status'])
                 return Response({'status': 'awaiting_approval'})
 
-            provision_registration(reg)
+            try:
+                provision_registration(reg)
+            except OnboardingError as exc:
+                raise ValidationError(str(exc))
             return Response({'status': 'provisioned'})
