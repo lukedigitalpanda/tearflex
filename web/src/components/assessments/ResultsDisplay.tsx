@@ -32,6 +32,9 @@ export function ResultsDisplay({ result, thresholds }: { result: TestResult; thr
     ? `${result.lipid_grade} — ${GUILLON_LABELS[result.lipid_grade] ?? ''}`
     : 'Not assessed'
 
+  const lipidProvisional =
+    result.lipid_grade != null && (result.analysis_version ?? '').startsWith('lipid-v0')
+
   return (
     <div className="space-y-4">
       <Card className="p-6" style={{ backgroundColor: `${band.color}18` }}>
@@ -45,7 +48,17 @@ export function ResultsDisplay({ result, thresholds }: { result: TestResult; thr
       <Card className="grid grid-cols-2 gap-4 p-5 sm:grid-cols-3">
         <Metric label="NIBUT mean" value={result.nibut_mean_breakup_seconds != null ? `${result.nibut_mean_breakup_seconds.toFixed(1)}s` : 'Not assessed'} />
         <Metric label="Fluorescein grade" value={fluoresceinValue} />
-        <Metric label="Lipid grade" value={lipidValue} />
+        <div>
+          <div className="text-xs uppercase text-muted-foreground">
+            Lipid grade
+            {lipidProvisional && (
+              <span className="ml-1 rounded bg-amber-100 px-1 py-0.5 text-[10px] font-medium text-amber-800">
+                Provisional
+              </span>
+            )}
+          </div>
+          <div className="font-medium tabular-nums">{lipidValue}</div>
+        </div>
         <Metric label="Tear meniscus" value={result.tear_meniscus_height_mm != null ? `${result.tear_meniscus_height_mm}mm` : 'Not assessed'} />
         <Metric label="Confidence" value={result.confidence_score != null ? `${Math.round(result.confidence_score * 100)}%` : 'Not assessed'} />
       </Card>

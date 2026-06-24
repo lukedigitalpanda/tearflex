@@ -20,3 +20,21 @@ describe('ResultsDisplay', () => {
     expect(screen.getAllByText(/not assessed/i).length).toBeGreaterThan(0)
   })
 })
+
+const lipidProvisional = {
+  nibut_first_breakup_seconds: null, nibut_mean_breakup_seconds: null, nibut_heatmap: null,
+  fluorescein_grade: null, fluorescein_breakup_seconds: null,
+  lipid_grade: 3, lipid_thickness_nm: 60, tear_meniscus_height_mm: null,
+  dry_eye_severity: 'mild' as const, confidence_score: 0.2, analysis_version: 'lipid-v0.1',
+}
+
+describe('ResultsDisplay lipid provisional badge', () => {
+  it('badges the auto lipid grade as provisional', () => {
+    render(<ResultsDisplay result={lipidProvisional as never} thresholds={{ normal: 10, borderline: 5 }} />)
+    expect(screen.getByText(/provisional/i)).toBeInTheDocument()
+  })
+  it('does not badge a NIBUT result as provisional', () => {
+    render(<ResultsDisplay result={{ ...lipidProvisional, analysis_version: 'nibut-v1', lipid_grade: null } as never} thresholds={{ normal: 10, borderline: 5 }} />)
+    expect(screen.queryByText(/provisional/i)).not.toBeInTheDocument()
+  })
+})
