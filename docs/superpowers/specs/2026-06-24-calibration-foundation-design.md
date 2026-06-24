@@ -30,15 +30,26 @@ distance. "Curvier cornea" and "held closer" look identical to the camera unless
 
 1. **Variable-distance architecture.** The calibrated `scale` is a *function of the recovered working
    distance*, not a constant.
-2. **Cross-platform, reference-object-anchored.** The **one-time reference-object calibration**
-   (photograph a known-size sphere / model eye) is the **primary anchor** — it works identically on
-   any camera, so both iOS and Android are first-class.
-3. **Autofocus distance is an opportunistic bonus.** iOS reports a reliable per-capture focus distance
-   + camera intrinsics; many Android devices report it "uncalibrated". So autofocus *refines* the
-   estimate where the device reports it trustworthily, with a graceful fallback (reference + ring
-   geometry) where it does not — **never load-bearing on its own.**
-4. **Ring-geometry as a fallback distance lever.** The inter-ring spacing pattern carries some distance
-   information; used as a sanity-check / backstop when neither autofocus nor a fresh reference applies.
+2. **Cross-platform, iris-anchored.** The primary distance lever is the **iris / limbus as a built-in
+   scale reference** — its visible diameter is ~11.7 mm ± 0.5 mm across humans, it is always in frame
+   during an eye capture, and recovering distance from it (pixel size + focal length, similar
+   triangles) is pure image processing, so it works identically on iOS and Android. Google's
+   open-source **MediaPipe Iris** implements exactly this and reports **~4.3% mean distance error**
+   (population-average iris). It substantially reduces — possibly removes — the dependence on a shipped
+   physical reference object (the patient's own eye is the ruler).
+3. **Accuracy path & honesty (the load-bearing caveat).** ~4.3% distance ≈ ~±2 D on K = **screening
+   grade**. Approaching **diagnostic grade** (<1% distance ≈ ~±0.4 D, near keratometry's ±0.25–0.5 D)
+   means stacking: **patient-specific iris size** (measure once — kills the dominant biological-
+   variation error), **sub-pixel limbus segmentation** + good intrinsics, **multi-frame averaging**,
+   and **LiDAR** (<2%, rear-facing on iPhone Pro) where the device has it. **<1% is the target, not a
+   guarantee** — only validation against a gold-standard keratometer (e.g. Keratograph) on real eyes
+   confirms the real number. We already do circle detection for the Placido rings, so limbus detection
+   is in reach (caveat: the clip must not fully occlude the limbus — verify on real captures).
+4. **Secondary / opportunistic levers:** a one-time **reference-object** solve (known-size sphere /
+   model eye) as an *optional* higher-confidence anchor; **autofocus distance** (reliable iOS,
+   "uncalibrated" on many Androids) and **ring-geometry** inter-ring spacing as refinements / backstops.
+   None is load-bearing on its own. *(Note: the front-facing Face ID / TrueDepth depth sensor cannot be
+   used — the clinical capture is on the REAR camera; the iris method runs on that rear image instead.)*
 5. **Additive via existing seams.** Subsystem A produces the real `scale` (and `colour_profile`); the
    modules consume them unchanged through seams they already have.
 6. **Honest validation boundary.** Synthetic tests can only prove the maths is *self-consistent*; real
@@ -65,11 +76,13 @@ Subsystem A computes these and the analysers consume them; nothing in the module
 ### Distance recovery (per capture)
 ```
 working_distance = best_available_of(
-    reference_anchored_estimate(device_calibration, ring_geometry),   # primary, cross-platform
-    autofocus_distance(capture_metadata) if trustworthy,              # bonus: iOS + capable Android
+    iris_scale_estimate(image, camera_intrinsics, patient_iris_mm),   # PRIMARY, cross-platform (MediaPipe-Iris style)
+    lidar_depth(capture_metadata) if available,                       # accuracy bonus: iPhone Pro (rear LiDAR)
+    reference_anchored_estimate(device_calibration) if calibrated,    # optional higher-confidence anchor
+    autofocus_distance(capture_metadata) if trustworthy,              # refinement: iOS + capable Android
     ring_spacing_estimate(rings),                                     # fallback / sanity check
 )
-scale = device_calibration.scale_at(working_distance)
+scale = device_calibration.scale_at(working_distance, camera_intrinsics)
 calibration_state = 'calibrated' if device_calibration else 'default' if model_profile else 'uncalibrated'
 ```
 
@@ -83,13 +96,13 @@ constants depend on the attachment's exact ring geometry (an input, below).
 
 ## Cross-platform handling
 
-- **iOS** (AVFoundation / vision-camera): reliable camera intrinsics + focus distance → reference
-  anchor *plus* autofocus refinement.
-- **Android** (Camera2): reference anchor is primary; autofocus distance used **only** when the device
-  reports `LENS_INFO_FOCUS_DISTANCE_CALIBRATION` as calibrated, else dropped to the ring-geometry
-  fallback. The capture layer records which signals were available for provenance.
-- Both platforms run the **same** reference-object calibration flow and the **same** reconstruction
-  maths; only the optional autofocus signal differs.
+- **Both platforms** run the **same iris-scale distance recovery on the rear-camera image** (pure image
+  processing — the patient's iris is the cross-platform ruler) and the **same** reconstruction maths.
+- **iOS** (AVFoundation / vision-camera): adds reliable camera intrinsics + autofocus distance, and
+  **rear LiDAR** (<2%) on Pro models, as accuracy refinements.
+- **Android** (Camera2): iris-scale is primary; autofocus distance used **only** when the device reports
+  `LENS_INFO_FOCUS_DISTANCE_CALIBRATION` as calibrated; rear ToF / ARCore Depth used where present. The
+  capture layer records which signals were available for provenance.
 
 ## Honesty model
 
@@ -106,9 +119,11 @@ constants depend on the attachment's exact ring geometry (an input, below).
 - The `DeviceCalibration` data model + API + version tracking.
 - Mobile capture of the focus-distance + intrinsics metadata (cross-platform, best-effort).
 - The distance-aware `scale` *signature* + the `calibration_state` → badge plumbing.
-- The reference-object **solve + inversion maths**, tested for **self-consistency** against synthetic
-  ground truth (a synthetic Placido reflection of a known-radius sphere at a known distance → assert
-  the calibrated reconstruction recovers the true curvature within tolerance).
+- The **iris-scale distance estimate** + the **calibration solve + inversion maths**, tested for
+  **self-consistency** against synthetic ground truth (a synthetic Placido reflection of a known-radius
+  sphere with a known iris at a known distance → assert the calibrated reconstruction recovers the true
+  curvature within tolerance). MediaPipe-Iris-style iris measurement can be prototyped now against the
+  published ~4.3% accuracy.
 
 **Needs the hardware spec + a real reference object + real captures (deferred — accuracy, not maths):**
 - Real metric accuracy on actual eyes (synthetic self-consistency ≠ clinical accuracy).
@@ -126,13 +141,16 @@ constants depend on the attachment's exact ring geometry (an input, below).
   user's decision, the modules + A merge together once A is done — so the wiring is the final
   integration step, not a per-module change now.
 
-## Open inputs needed from the hardware spec (parameters, not blockers to A-structural)
+## Open inputs / validation items (parameters, not blockers to A-structural)
 
-1. **Does a known-size reference object (sphere / model eye) ship with the kit, and its dimensions?**
-   — *pivotal*: it is the cross-platform anchor. If not, Android distance recovery needs a fallback plan
-   and the automatic path leans iOS-by-physics.
-2. The attachment's **exact ring geometry** (ring radii + disc-to-lens offset).
-3. Confirmation each platform exposes a **usable focus distance** (iOS broadly; Android per-device).
+1. The attachment's **exact ring geometry** (ring radii + disc-to-lens offset) — needed for the
+   reconstruction maths.
+2. **Iris / limbus visibility through the clip** — confirm the limbus is reliably segmentable in the
+   rear capture (the iris is now the primary cross-platform distance anchor); verify on real captures.
+3. **Patient iris-diameter source** for diagnostic grade — a one-time per-patient measurement removes
+   the ~4% biological-variation error; population-average (~11.7 mm) is fine for screening grade.
+4. *(De-prioritized)* Whether a physical **reference object** ships — now an *optional* higher-confidence
+   anchor, no longer load-bearing; plus per-platform autofocus / LiDAR availability.
 
 ## Out of scope (this subsystem / deferred)
 
