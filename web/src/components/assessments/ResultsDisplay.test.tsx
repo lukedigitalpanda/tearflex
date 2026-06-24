@@ -20,3 +20,21 @@ describe('ResultsDisplay', () => {
     expect(screen.getAllByText(/not assessed/i).length).toBeGreaterThan(0)
   })
 })
+
+const fluoresceinProvisional = {
+  nibut_first_breakup_seconds: null, nibut_mean_breakup_seconds: null, nibut_heatmap: null,
+  fluorescein_grade: 2, fluorescein_breakup_seconds: 7.0,
+  lipid_grade: null, lipid_thickness_nm: null, tear_meniscus_height_mm: null,
+  dry_eye_severity: 'mild' as const, confidence_score: 0.5, analysis_version: 'fluorescein-v0.1',
+}
+
+describe('ResultsDisplay fluorescein provisional badge', () => {
+  it('badges the auto fluorescein grade as provisional', () => {
+    render(<ResultsDisplay result={fluoresceinProvisional as never} thresholds={{ normal: 10, borderline: 5 }} />)
+    expect(screen.getByText(/provisional/i)).toBeInTheDocument()
+  })
+  it('does not badge a NIBUT result as provisional', () => {
+    render(<ResultsDisplay result={{ ...fluoresceinProvisional, analysis_version: 'nibut-v1', fluorescein_grade: null } as never} thresholds={{ normal: 10, borderline: 5 }} />)
+    expect(screen.queryByText(/provisional/i)).not.toBeInTheDocument()
+  })
+})
