@@ -11,14 +11,17 @@ def reconstruct_curvature(rings: dict, scale: float = NOMINAL_DIOPTRE_SCALE) -> 
     """Map ring radii to a per-meridian apparent power profile (uncalibrated)."""
     radii = rings['radii']
     mean_radius_per_angle = radii.mean(axis=1)
-    power_per_angle = scale / mean_radius_per_angle
-    central_power = float(np.mean(scale / radii[:, 0]))
+    # Validate radii BEFORE dividing so a degenerate frame fails fast without a
+    # numpy divide-by-zero warning (would otherwise fire on every bad frame).
     if (
         mean_radius_per_angle.size == 0
         or not np.all(mean_radius_per_angle > 0)
-        or not np.all(np.isfinite(power_per_angle))
-        or not np.isfinite(central_power)
+        or not np.all(radii[:, 0] > 0)
     ):
+        raise ValueError("degenerate reconstruction: non-positive radii")
+    power_per_angle = scale / mean_radius_per_angle
+    central_power = float(np.mean(scale / radii[:, 0]))
+    if not np.all(np.isfinite(power_per_angle)) or not np.isfinite(central_power):
         raise ValueError("degenerate reconstruction: non-finite curvature")
     return {
         'angles_deg': rings['angles_deg'],
