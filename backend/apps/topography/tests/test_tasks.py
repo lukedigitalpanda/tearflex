@@ -33,6 +33,28 @@ def test_process_scan_creates_result_and_marks_selected():
 
 
 @pytest.mark.django_db
+def test_process_scan_resets_stale_selection_on_rerun():
+    """A previously-selected still that has become unreadable must not keep its
+    stale is_selected flag — exactly one (readable) still ends up selected."""
+    scan = TopographyScan.objects.create(assessment=AssessmentFactory(), status='uploaded')
+    TopographyStill.objects.create(scan=scan, image=_png('soft.png', 5.0), index=0)
+    TopographyStill.objects.create(scan=scan, image=_png('crisp.png', 1.0), index=1)
+    # Simulate a still selected by a prior run whose file is now gone/corrupt:
+    # cv2.imread on this bogus path returns None, so it is excluded from `valid`.
+    stale = TopographyStill.objects.create(
+        scan=scan, image='topography/stills/gone/missing.png', index=2, is_selected=True)
+
+    process_topography_scan(scan.id)
+
+    scan.refresh_from_db()
+    assert scan.status == 'analysed'
+    selected = scan.stills.filter(is_selected=True)
+    assert selected.count() == 1
+    assert selected.first().id != stale.id
+    assert selected.first().index in (0, 1)
+
+
+@pytest.mark.django_db
 def test_process_scan_no_stills_sets_failed():
     scan = TopographyScan.objects.create(assessment=AssessmentFactory(), status='uploaded')
     with pytest.raises(Exception):

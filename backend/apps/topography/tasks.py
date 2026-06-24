@@ -12,6 +12,10 @@ def process_topography_scan(scan_id: int) -> None:
     scan.status = 'processing'
     scan.save(update_fields=['status', 'updated_at'])
     try:
+        # Clear any stale selection from a prior run so the loop below can set
+        # exactly the winner. An unreadable still (excluded from `valid`) is
+        # reset here and stays False; a readable one gets reset then re-set.
+        scan.stills.update(is_selected=False)
         stills = list(scan.stills.all())
         images = [cv2.imread(s.image.path) for s in stills]
         valid = [(s, im) for s, im in zip(stills, images) if im is not None]
