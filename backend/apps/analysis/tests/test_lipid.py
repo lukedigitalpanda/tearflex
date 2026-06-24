@@ -2,6 +2,10 @@ import cv2
 import numpy as np
 import pytest
 from apps.analysis.tests.synthetic_lipid import make_lipid_pattern
+from apps.analysis.lipid import (
+    detect_lipid_roi, select_sharpest_frame, colour_features,
+    grade_lipid, thickness_from_colour, analyse_lipid,
+)
 
 
 def _saturation(img):
@@ -22,9 +26,6 @@ def test_lipid_pattern_shapes_and_distinguishable():
     assert _saturation(fringes) > _saturation(amor)
 
 
-from apps.analysis.lipid import detect_lipid_roi, select_sharpest_frame
-
-
 def test_detect_lipid_roi_bounds_the_disc():
     img = make_lipid_pattern('amorphous', size=200)
     x, y, w, h = detect_lipid_roi(img)
@@ -40,9 +41,6 @@ def test_select_sharpest_frame_picks_crisp():
 def test_select_sharpest_frame_empty_raises():
     with pytest.raises(ValueError):
         select_sharpest_frame([])
-
-
-from apps.analysis.lipid import colour_features
 
 
 def _roi(img):
@@ -62,9 +60,6 @@ def test_colour_features_all_dark_returns_zero():
     assert f['mean_saturation'] == 0.0
 
 
-from apps.analysis.lipid import grade_lipid, thickness_from_colour
-
-
 def test_grade_lipid_orders_meshwork_below_amorphous_below_fringes():
     g_mesh = grade_lipid(_roi(make_lipid_pattern('meshwork')))
     g_amor = grade_lipid(_roi(make_lipid_pattern('amorphous')))
@@ -79,9 +74,6 @@ def test_thickness_rises_with_colour():
     t_fringes = thickness_from_colour(_roi(make_lipid_pattern('fringes')))
     assert 10 <= t_mesh <= 120 and 10 <= t_fringes <= 120
     assert t_fringes > t_mesh
-
-
-from apps.analysis.lipid import analyse_lipid
 
 
 def test_analyse_lipid_returns_full_provisional_result():
