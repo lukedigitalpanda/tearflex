@@ -79,3 +79,44 @@ def thickness_from_colour(roi_bgr: np.ndarray) -> float:
     sat = colour_features(roi_bgr)['mean_saturation']
     nm = 15.0 + (sat / 255.0) * 90.0     # greyish (thin) -> ~15nm; saturated -> ~105nm
     return float(np.clip(round(nm, 1), 10.0, 120.0))
+
+
+# Deliberately low: this slice is uncalibrated + unvalidated (see spec honesty model).
+_BASE_CONFIDENCE = 0.2
+
+
+def analyse_lipid(frames: list[np.ndarray], fps: float = 10.0, colour_profile=None) -> dict:
+    """Provisional lipid Guillon grade + thickness from the sharpest frame.
+
+    `colour_profile` is the calibration seam (None = passthrough); the shared
+    calibration foundation will supply a white-balance transform here later.
+    `fps` is unused (static pattern) — accepted for analyser-signature parity.
+    """
+    if not frames:
+        raise ValueError("No frames for lipid analysis")
+    if colour_profile is not None:
+        frames = [colour_profile.apply(f) for f in frames]
+
+    best = select_sharpest_frame(frames)
+    frame = frames[best]
+    x, y, w, h = detect_lipid_roi(frame)
+    roi = frame[y:y + h, x:x + w]
+
+    feats = colour_features(roi)
+    grade = grade_lipid(roi)
+    thickness = thickness_from_colour(roi)
+
+    # Confidence stays low and drops further on an ambiguous (near-grey, low-texture) ROI.
+    gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY) if roi.size else np.zeros((1, 1), np.uint8)
+    tex = edge_density(gray)
+    informative = min(1.0, feats['mean_saturation'] / 80.0 + tex / 0.1)
+    confidence = float(np.clip(_BASE_CONFIDENCE * informative, 0.05, 0.5))
+
+    return {
+        'lipid_grade': grade,
+        'lipid_thickness_nm': thickness,
+        'grade_provisional': True,
+        'thickness_provisional': True,
+        'confidence': round(confidence, 3),
+        'features': {k: round(v, 3) for k, v in feats.items()},
+    }

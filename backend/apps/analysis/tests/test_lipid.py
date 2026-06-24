@@ -79,3 +79,24 @@ def test_thickness_rises_with_colour():
     t_fringes = thickness_from_colour(_roi(make_lipid_pattern('fringes')))
     assert 10 <= t_mesh <= 120 and 10 <= t_fringes <= 120
     assert t_fringes > t_mesh
+
+
+from apps.analysis.lipid import analyse_lipid
+
+
+def test_analyse_lipid_returns_full_provisional_result():
+    frames = [make_lipid_pattern('fringes', size=200, blur=3.0),
+              make_lipid_pattern('fringes', size=200, blur=0.0)]   # 2nd is sharpest
+    res = analyse_lipid(frames, fps=10.0)
+    for key in ('lipid_grade', 'lipid_thickness_nm', 'grade_provisional',
+                'thickness_provisional', 'confidence', 'features'):
+        assert key in res
+    assert res['grade_provisional'] is True and res['thickness_provisional'] is True
+    assert 1 <= res['lipid_grade'] <= 5
+    assert 10 <= res['lipid_thickness_nm'] <= 120
+    assert 0.0 <= res['confidence'] <= 1.0
+
+
+def test_analyse_lipid_empty_raises():
+    with pytest.raises(ValueError):
+        analyse_lipid([], fps=10.0)
