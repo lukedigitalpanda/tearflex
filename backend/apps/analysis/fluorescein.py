@@ -33,8 +33,9 @@ def breakup_metric(roi_bgr: np.ndarray) -> float:
     film_area = int(film.sum())
     if film_area == 0:
         return 0.0
-    hole_in_film = int(np.logical_and(holes, _fill(film)).sum())
-    return float(hole_in_film) / float(_fill(film).sum() or 1)
+    filled = _fill(film)        # fill once; breakup_metric runs per frame
+    hole_in_film = int(np.logical_and(holes, filled).sum())
+    return float(hole_in_film) / float(filled.sum() or 1)
 
 
 def _fill(mask: np.ndarray) -> np.ndarray:
