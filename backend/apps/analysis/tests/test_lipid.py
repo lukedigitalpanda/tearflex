@@ -40,3 +40,23 @@ def test_select_sharpest_frame_picks_crisp():
 def test_select_sharpest_frame_empty_raises():
     with pytest.raises(ValueError):
         select_sharpest_frame([])
+
+
+from apps.analysis.lipid import colour_features
+
+
+def _roi(img):
+    x, y, w, h = detect_lipid_roi(img)
+    return img[y:y + h, x:x + w]
+
+
+def test_colour_features_fringes_more_saturated_than_meshwork():
+    f_mesh = colour_features(_roi(make_lipid_pattern('meshwork')))
+    f_fringes = colour_features(_roi(make_lipid_pattern('fringes')))
+    assert f_fringes['mean_saturation'] > f_mesh['mean_saturation']
+    assert f_fringes['hue_spread'] >= f_mesh['hue_spread']
+
+
+def test_colour_features_all_dark_returns_zero():
+    f = colour_features(np.zeros((10, 10, 3), dtype=np.uint8))
+    assert f['mean_saturation'] == 0.0

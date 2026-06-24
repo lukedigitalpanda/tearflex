@@ -26,3 +26,19 @@ def select_sharpest_frame(frames: list[np.ndarray]) -> int:
         raise ValueError("No frames to select from")
     scores = [cv2.Laplacian(cv2.cvtColor(f, cv2.COLOR_BGR2GRAY), cv2.CV_64F).var() for f in frames]
     return int(np.argmax(scores))
+
+
+def colour_features(roi_bgr: np.ndarray) -> dict:
+    """Interference-colour features over the bright ROI pixels."""
+    if roi_bgr.size == 0:
+        return {'mean_saturation': 0.0, 'hue_spread': 0.0, 'dominant_hue': 0.0}
+    hsv = cv2.cvtColor(roi_bgr, cv2.COLOR_BGR2HSV)
+    h, s, v = hsv[..., 0], hsv[..., 1], hsv[..., 2]
+    bright = v > 40
+    if not bright.any():
+        return {'mean_saturation': 0.0, 'hue_spread': 0.0, 'dominant_hue': 0.0}
+    return {
+        'mean_saturation': float(s[bright].mean()),
+        'hue_spread': float(h[bright].std()),
+        'dominant_hue': float(np.median(h[bright])),
+    }
