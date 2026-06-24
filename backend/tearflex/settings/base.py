@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     'apps.patients',
     'apps.assessments',
     'apps.analysis',
+    'apps.topography',
     'apps.reports',
 ]
 
