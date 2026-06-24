@@ -1,6 +1,9 @@
 import numpy as np
+from PIL import Image
 from apps.analysis.tests.synthetic_fluorescein import make_dyed_film_clip, make_staining_image
-from apps.analysis.fluorescein import detect_tearfilm_roi, breakup_metric
+from apps.analysis.fluorescein import (
+    detect_tearfilm_roi, breakup_metric, grade_staining, analyse_fluorescein,
+)
 
 
 def test_dyed_film_clip_shape_and_breakup_progression():
@@ -38,9 +41,6 @@ def test_breakup_metric_rises_after_breakup():
     assert broken > intact + 0.05
 
 
-from apps.analysis.fluorescein import grade_staining
-
-
 def test_grade_staining_zero_for_clean_cornea():
     assert grade_staining(make_staining_image(n_spots=0)) == 0
 
@@ -50,10 +50,6 @@ def test_grade_staining_monotonic_with_spots():
     g_many = grade_staining(make_staining_image(n_spots=20))
     assert 0 <= g_few <= g_many <= 5
     assert g_many > g_few
-
-
-from PIL import Image
-from apps.analysis.fluorescein import analyse_fluorescein
 
 
 def test_analyse_fluorescein_recovers_breakup_time():

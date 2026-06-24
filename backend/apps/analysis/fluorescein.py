@@ -1,5 +1,7 @@
 import cv2
 import numpy as np
+from PIL import Image
+from .utils import normalise_distortions, detect_breakup_times, N_BASELINE
 
 FLUOR_BRIGHT_PERCENTILE = 75.0   # pixels brighter than this (within frame) are "fluorescing"
 HOLE_RELATIVE_FRACTION = 0.45    # holes are < this * the fluorescing brightness
@@ -68,9 +70,6 @@ def grade_staining(roi_bgr: np.ndarray) -> int:
             grade += 1
     return min(grade, 5)
 
-
-from PIL import Image
-from .utils import normalise_distortions, detect_breakup_times, N_BASELINE
 
 _HEATMAP_STABLE = (120, 220, 120)   # BGR green (intact film)
 _HEATMAP_BREAKUP = (30, 30, 220)    # BGR red (break-up)
