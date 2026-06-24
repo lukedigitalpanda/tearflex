@@ -92,6 +92,7 @@ def _analyse_lipid(video_path: str) -> dict:
         'confidence_score': result['confidence'],
         'analysis_version': 'lipid-v0.1',
         'raw_output': {
+            'note': 'Provisional heuristic — not a clinical claim; pending professional validation.',
             'grade_provisional': result['grade_provisional'],
             'thickness_provisional': result['thickness_provisional'],
             'features': result['features'],
