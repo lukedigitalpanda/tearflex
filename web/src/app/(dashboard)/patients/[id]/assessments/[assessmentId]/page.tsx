@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { useAssessment } from '@/hooks/useAssessments'
 import { usePractice } from '@/hooks/usePractice'
 import { useReports, downloadReportUrl } from '@/hooks/useReports'
+import { useTopographyScans } from '@/hooks/useTopography'
+import { TopographyResult } from '@/components/topography/TopographyResult'
 import { ResultsDisplay } from '@/components/assessments/ResultsDisplay'
 import { GenerateReportButton } from '@/components/reports/GenerateReportButton'
 import { CompareButton } from '@/components/reports/CompareButton'
@@ -10,11 +12,13 @@ import { Button } from '@/components/ui/button'
 import { LoadingState } from '@/components/common/LoadingState'
 import { EmptyState } from '@/components/common/EmptyState'
 import type { TestCapture } from '@shared/types/assessment'
+import type { TopographyScan } from '@shared/types/topography'
 
 export default function AssessmentDetailPage({ params }: { params: { assessmentId: string } }) {
   const { data: assessment, isLoading } = useAssessment(Number(params.assessmentId))
   const { data: practice } = usePractice()
   const { data: reportsData } = useReports(assessment?.patient)
+  const { data: topographyData } = useTopographyScans(assessment?.id)
   if (isLoading || !assessment) return <LoadingState />
 
   const thresholds = {
@@ -62,6 +66,15 @@ export default function AssessmentDetailPage({ params }: { params: { assessmentI
                 : <EmptyState title="Capture not yet analysed" />}
             </div>
           ))}
+
+      {(topographyData?.results ?? []).map((scan: TopographyScan) => (
+        <div key={`topo-${scan.id}`} className="space-y-2">
+          <h2 className="text-sm font-semibold text-muted-foreground">CORNEAL TOPOGRAPHY</h2>
+          {scan.result
+            ? <TopographyResult result={scan.result} />
+            : <EmptyState title="Topography scan not yet analysed" />}
+        </div>
+      ))}
     </div>
   )
 }
