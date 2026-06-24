@@ -58,9 +58,8 @@ def grade_staining(roi_bgr: np.ndarray) -> int:
     Research heuristic, not clinically validated."""
     if roi_bgr.size == 0:
         return 0
-    hsv = cv2.cvtColor(roi_bgr, cv2.COLOR_BGR2HSV)
     gray = cv2.cvtColor(roi_bgr, cv2.COLOR_BGR2GRAY)
-    # staining spots are bright AND high-value; threshold on brightness.
+    # staining spots are bright; threshold on brightness.
     spots = gray >= max(float(np.percentile(gray, 99)), 180)
     coverage = float(spots.sum()) / float(gray.size or 1)
     grade = 0
