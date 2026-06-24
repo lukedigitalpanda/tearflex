@@ -1,4 +1,6 @@
+import numpy as np
 import cv2
+import pytest
 from apps.analysis.topography.rings import find_reflection_center, extract_rings
 from apps.analysis.topography.reconstruct import reconstruct_curvature
 from apps.analysis.topography.tests.synthetic import make_ring_image
@@ -20,3 +22,13 @@ def test_power_profile_varies_for_astigmatic():
     p = c['power_per_angle']
     assert p.std() / p.mean() > 0.05
     assert c['central_power'] > 0
+
+
+def test_reconstruct_raises_on_degenerate_zero_radii():
+    """Zero radii produce inf power; reconstruct_curvature must raise ValueError."""
+    rings = {
+        'radii': np.zeros((180, 6)),
+        'angles_deg': np.linspace(0, 359, 180),
+    }
+    with pytest.raises(ValueError, match="degenerate reconstruction"):
+        reconstruct_curvature(rings)

@@ -1,3 +1,5 @@
+import logging
+
 import cv2
 from celery import shared_task
 from django.core.files.base import ContentFile
@@ -5,13 +7,16 @@ from apps.analysis.topography.frames import select_best_frame, sharpness
 from apps.analysis.topography.pipeline import analyse_topography_frame
 from .models import TopographyScan, TopographyResult
 
+logger = logging.getLogger(__name__)
 
-@shared_task
-def process_topography_scan(scan_id: int) -> None:
-    scan = TopographyScan.objects.get(id=scan_id)
-    scan.status = 'processing'
-    scan.save(update_fields=['status', 'updated_at'])
+
+@shared_task(bind=True, max_retries=3)
+def process_topography_scan(self, scan_id: int) -> None:
     try:
+        scan = TopographyScan.objects.get(id=scan_id)
+        scan.status = 'processing'
+        scan.save(update_fields=['status', 'updated_at'])
+
         # Clear any stale selection from a prior run so the loop below can set
         # exactly the winner. An unreadable still (excluded from `valid`) is
         # reset here and stays False; a readable one gets reset then re-set.
@@ -54,7 +59,14 @@ def process_topography_scan(scan_id: int) -> None:
 
         scan.status = 'analysed'
         scan.save(update_fields=['status', 'updated_at'])
-    except Exception:
-        scan.status = 'failed'
-        scan.save(update_fields=['status', 'updated_at'])
-        raise
+        logger.info(f'Scan {scan_id} analysed successfully')
+
+    except Exception as exc:
+        logger.error(f'Scan {scan_id} analysis failed: {exc}')
+        try:
+            scan = TopographyScan.objects.get(id=scan_id)
+            scan.status = 'failed'
+            scan.save(update_fields=['status', 'updated_at'])
+        except TopographyScan.DoesNotExist:
+            pass
+        raise self.retry(exc=exc, countdown=30)

@@ -13,6 +13,13 @@ def reconstruct_curvature(rings: dict, scale: float = NOMINAL_DIOPTRE_SCALE) -> 
     mean_radius_per_angle = radii.mean(axis=1)
     power_per_angle = scale / mean_radius_per_angle
     central_power = float(np.mean(scale / radii[:, 0]))
+    if (
+        mean_radius_per_angle.size == 0
+        or not np.all(mean_radius_per_angle > 0)
+        or not np.all(np.isfinite(power_per_angle))
+        or not np.isfinite(central_power)
+    ):
+        raise ValueError("degenerate reconstruction: non-finite curvature")
     return {
         'angles_deg': rings['angles_deg'],
         'mean_radius_per_angle': mean_radius_per_angle,
