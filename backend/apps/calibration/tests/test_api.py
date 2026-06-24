@@ -25,6 +25,16 @@ def test_list_calibrations_scoped_and_filterable(api, clinician):
 
 
 @pytest.mark.django_db
+def test_list_excludes_other_practice(api, clinician):
+    from conftest import PracticeFactory
+    mine = DeviceCalibration.objects.create(practice=clinician.practice, phone_model_id='iphone16,2')
+    DeviceCalibration.objects.create(practice=PracticeFactory(), phone_model_id='iphone16,2')
+    resp = api.get('/api/calibration/devices/')
+    assert resp.status_code == 200
+    assert [r['id'] for r in resp.data['results']] == [mine.id]
+
+
+@pytest.mark.django_db
 def test_detail_other_practice_404(api):
     from conftest import PracticeFactory
     other = DeviceCalibration.objects.create(practice=PracticeFactory(), phone_model_id='x')

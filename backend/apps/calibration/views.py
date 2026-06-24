@@ -1,6 +1,6 @@
 from rest_framework import generics, permissions
 from rest_framework.exceptions import PermissionDenied
-from apps.accounts.scoping import accessible_practice_ids, scope_queryset
+from apps.accounts.scoping import scope_queryset
 from .models import DeviceCalibration
 from .serializers import DeviceCalibrationSerializer
 
