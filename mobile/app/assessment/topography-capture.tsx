@@ -49,6 +49,7 @@ export default function TopographyCaptureScreen() {
       }
       setTimeout(() => camera.current?.stopRecording(), VIDEO_MAX_MS);
     } catch {
+      camera.current?.stopRecording();
       setCapturing(false);
     }
   }
@@ -77,6 +78,7 @@ export default function TopographyCaptureScreen() {
         isActive
         photo
         video
+        audio={false}
       />
       <View style={[styles.overlay, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={12}>
