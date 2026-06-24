@@ -30,9 +30,13 @@ class TopographyScanListCreateView(generics.ListCreateAPIView):
             self.request.user, 'assessment__patient__practice',
         )
         assessment_id = self.request.query_params.get('assessment')
-        if assessment_id:
-            qs = qs.filter(assessment_id=assessment_id)
-        return qs
+        if not assessment_id:
+            return qs.none()
+        try:
+            assessment_id = int(assessment_id)
+        except (TypeError, ValueError):
+            return qs.none()
+        return qs.filter(assessment_id=assessment_id)
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)

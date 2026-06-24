@@ -91,3 +91,19 @@ def test_list_scans_scoped_to_practice(api):
     resp = api.get(f'/api/topography/scans/?assessment={other.id}')
     assert resp.status_code == 200
     assert resp.data['results'] == []
+
+
+@pytest.mark.django_db
+def test_list_scans_requires_assessment_param(api, clinician):
+    assessment = AssessmentFactory(patient__practice=clinician.practice)
+    TopographyScan.objects.create(assessment=assessment, status='analysed')
+    resp = api.get('/api/topography/scans/')
+    assert resp.status_code == 200
+    assert resp.data['results'] == []
+
+
+@pytest.mark.django_db
+def test_list_scans_invalid_assessment_param(api, clinician):
+    resp = api.get('/api/topography/scans/?assessment=notanint')
+    assert resp.status_code == 200
+    assert resp.data['results'] == []
