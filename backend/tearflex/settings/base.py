@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     'apps.assessments',
     'apps.analysis',
     'apps.reports',
+    'apps.calibration',
 ]
 
 MIDDLEWARE = [
