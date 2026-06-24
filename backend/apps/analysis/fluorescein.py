@@ -67,3 +67,75 @@ def grade_staining(roi_bgr: np.ndarray) -> int:
         if coverage >= band:
             grade += 1
     return min(grade, 5)
+
+
+from PIL import Image
+from .utils import normalise_distortions, detect_breakup_times, N_BASELINE
+
+_HEATMAP_STABLE = (120, 220, 120)   # BGR green (intact film)
+_HEATMAP_BREAKUP = (30, 30, 220)    # BGR red (break-up)
+
+
+def generate_breakup_heatmap(base_frame, roi, metric_series) -> Image.Image:
+    """Overlay a stable→break-up colour on the ROI, intensity = mean break-up metric."""
+    x, y, w, h = roi
+    overlay = base_frame.copy()
+    if metric_series and w > 0 and h > 0:
+        norm = float(np.clip(np.mean(metric_series), 0.0, 1.0))
+        stable = np.array(_HEATMAP_STABLE, dtype=float)
+        broken = np.array(_HEATMAP_BREAKUP, dtype=float)
+        colour = (stable * (1 - norm) + broken * norm).astype(np.uint8)
+        layer = np.full((h, w, 3), colour, dtype=np.uint8)
+        roi_slice = overlay[y:y + h, x:x + w]
+        cv2.addWeighted(layer, 0.4, roi_slice, 0.6, 0, roi_slice)
+        overlay[y:y + h, x:x + w] = roi_slice
+    return Image.fromarray(cv2.cvtColor(overlay, cv2.COLOR_BGR2RGB))
+
+
+def analyse_fluorescein(frames: list[np.ndarray], fps: float = 10.0, colour_profile=None) -> dict:
+    """Deterministic fluorescein break-up timing + provisional staining grade.
+
+    `colour_profile` is the calibration seam (None = passthrough); the shared
+    calibration foundation will supply a white-balance transform here later.
+    """
+    if len(frames) <= N_BASELINE:
+        raise ValueError(
+            f"Video too short for fluorescein analysis (need more than {N_BASELINE} sampled frames)"
+        )
+    # colour_profile seam: identity for now.
+    if colour_profile is not None:
+        frames = [colour_profile.apply(f) for f in frames]
+
+    roi = detect_tearfilm_roi(frames[0])
+    x, y, w, h = roi
+
+    metrics: list[float] = []
+    for frame in frames:
+        metrics.append(breakup_metric(frame[y:y + h, x:x + w]))
+
+    distortions = normalise_distortions(metrics, n_baseline=N_BASELINE)
+    first_bu, mean_bu = detect_breakup_times(distortions, fps=fps)
+
+    grade = grade_staining(frames[0][y:y + h, x:x + w])
+
+    baseline = metrics[:N_BASELINE]
+    baseline_mean = float(np.mean(baseline)) + 1e-9
+    baseline_std = float(np.std(baseline))
+    confidence = float(np.clip(1.0 - (baseline_std / baseline_mean) * 4, 0.05, 0.99))
+
+    frame_metrics = [
+        {'frame_index': i, 'time_seconds': round(i / fps, 3),
+         'breakup_metric': round(metrics[i], 6), 'distortion': round(distortions[i], 4)}
+        for i in range(len(frames))
+    ]
+    heatmap = generate_breakup_heatmap(frames[0], roi, metrics)
+
+    return {
+        'first_breakup_seconds': first_bu,
+        'mean_breakup_seconds': mean_bu,
+        'fluorescein_grade': grade,
+        'grade_provisional': True,
+        'heatmap_image': heatmap,
+        'confidence': round(confidence, 3),
+        'frame_metrics': frame_metrics,
+    }

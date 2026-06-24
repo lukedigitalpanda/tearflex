@@ -50,3 +50,26 @@ def test_grade_staining_monotonic_with_spots():
     g_many = grade_staining(make_staining_image(n_spots=20))
     assert 0 <= g_few <= g_many <= 5
     assert g_many > g_few
+
+
+from PIL import Image
+from apps.analysis.fluorescein import analyse_fluorescein
+
+
+def test_analyse_fluorescein_recovers_breakup_time():
+    frames = make_dyed_film_clip(n_frames=30, size=200, break_at=15, n_holes=6)
+    res = analyse_fluorescein(frames, fps=10.0)
+    for key in ('first_breakup_seconds', 'mean_breakup_seconds', 'fluorescein_grade',
+                'grade_provisional', 'heatmap_image', 'confidence', 'frame_metrics'):
+        assert key in res
+    assert res['grade_provisional'] is True
+    assert isinstance(res['heatmap_image'], Image.Image)
+    assert 0.0 <= res['confidence'] <= 1.0
+    # break-up begins around frame 15 (= 1.5s at 10fps); allow detector latency.
+    assert 1.0 <= res['first_breakup_seconds'] <= 2.5
+
+
+def test_analyse_fluorescein_stable_clip_no_early_breakup():
+    frames = make_dyed_film_clip(n_frames=30, size=200, break_at=99)  # never breaks up
+    res = analyse_fluorescein(frames, fps=10.0)
+    assert res['first_breakup_seconds'] >= 2.5   # ~video duration, no early break-up
