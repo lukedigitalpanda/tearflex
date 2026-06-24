@@ -1,6 +1,9 @@
 from rest_framework import serializers
 from .models import TopographyScan, TopographyStill, TopographyResult
 
+# Capture sends ~3-5 stills; this is an abuse guard, not a functional limit.
+MAX_STILLS_PER_SCAN = 20
+
 
 class TopographyResultSerializer(serializers.ModelSerializer):
     class Meta:
@@ -34,8 +37,10 @@ class TopographyScanSerializer(serializers.ModelSerializer):
 class TopographyScanCreateSerializer(serializers.ModelSerializer):
     stills = serializers.ListField(
         child=serializers.ImageField(), write_only=True, required=False, default=list,
+        max_length=MAX_STILLS_PER_SCAN,
     )
 
     class Meta:
         model = TopographyScan
         fields = ['assessment', 'video_file', 'device_model', 'phone_model_id', 'app_version', 'stills']
+        extra_kwargs = {'assessment': {'write_only': True}}

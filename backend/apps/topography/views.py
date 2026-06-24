@@ -52,7 +52,10 @@ class TopographyScanDetailView(generics.RetrieveAPIView):
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
 def topography_scan_status(request, pk):
-    qs = scope_queryset(TopographyScan.objects.all(), request.user, 'assessment__patient__practice')
+    qs = scope_queryset(
+        TopographyScan.objects.select_related('result'),
+        request.user, 'assessment__patient__practice',
+    )
     try:
         scan = qs.get(pk=pk)
     except TopographyScan.DoesNotExist:

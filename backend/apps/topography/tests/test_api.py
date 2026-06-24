@@ -59,3 +59,14 @@ def test_detail_scoped_to_practice(api):
     scan = TopographyScan.objects.create(assessment=other, status='uploaded')
     resp = api.get(f'/api/topography/scans/{scan.id}/')
     assert resp.status_code == 404
+
+
+@pytest.mark.django_db
+def test_create_scan_rejects_too_many_stills(api, clinician):
+    assessment = AssessmentFactory(patient__practice=clinician.practice)
+    with patch('apps.topography.views.process_topography_scan.delay'):
+        resp = api.post('/api/topography/scans/', {
+            'assessment': assessment.id,
+            'stills': [_png(f's{i}.png') for i in range(21)],
+        }, format='multipart')
+    assert resp.status_code == 400
