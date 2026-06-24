@@ -32,6 +32,9 @@ export default function RootLayout() {
           <Stack.Screen name="assessment/capture" />
           <Stack.Screen name="assessment/processing" />
           <Stack.Screen name="assessment/results" />
+          <Stack.Screen name="assessment/topography-capture" />
+          <Stack.Screen name="assessment/topography-processing" />
+          <Stack.Screen name="assessment/topography-results" />
         </Stack>
       </AuthGate>
     </QueryClientProvider>
