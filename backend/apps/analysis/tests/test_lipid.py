@@ -60,3 +60,22 @@ def test_colour_features_fringes_more_saturated_than_meshwork():
 def test_colour_features_all_dark_returns_zero():
     f = colour_features(np.zeros((10, 10, 3), dtype=np.uint8))
     assert f['mean_saturation'] == 0.0
+
+
+from apps.analysis.lipid import grade_lipid, thickness_from_colour
+
+
+def test_grade_lipid_orders_meshwork_below_amorphous_below_fringes():
+    g_mesh = grade_lipid(_roi(make_lipid_pattern('meshwork')))
+    g_amor = grade_lipid(_roi(make_lipid_pattern('amorphous')))
+    g_fringes = grade_lipid(_roi(make_lipid_pattern('fringes')))
+    assert 1 <= g_mesh <= 5 and 1 <= g_amor <= 5 and 1 <= g_fringes <= 5
+    assert g_mesh < g_amor < g_fringes
+    assert g_fringes == 5
+
+
+def test_thickness_rises_with_colour():
+    t_mesh = thickness_from_colour(_roi(make_lipid_pattern('meshwork')))
+    t_fringes = thickness_from_colour(_roi(make_lipid_pattern('fringes')))
+    assert 10 <= t_mesh <= 120 and 10 <= t_fringes <= 120
+    assert t_fringes > t_mesh

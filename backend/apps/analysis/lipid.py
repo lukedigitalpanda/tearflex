@@ -42,3 +42,40 @@ def colour_features(roi_bgr: np.ndarray) -> dict:
         'hue_spread': float(h[bright].std()),
         'dominant_hue': float(np.median(h[bright])),
     }
+
+
+# Provisional thresholds (research seeds — replaced by the ML grader / colour calibration).
+_SAT_FRINGES = 60.0      # mean saturation above this => coloured fringes (grade 5)
+_TEX_OPEN = 0.12         # edge density above this => open meshwork (grade 1)
+_TEX_CLOSED = 0.06       # => closed meshwork (grade 2)
+_TEX_WAVE = 0.02         # => wave/flow (grade 3); below => amorphous (grade 4)
+
+
+def grade_lipid(roi_bgr: np.ndarray) -> int:
+    """Provisional Guillon grade 1..5. SEAM: heuristic, not clinically validated.
+    High texture + low colour => meshwork (low grade); smooth => amorphous (4);
+    high saturation => coloured fringes (5)."""
+    if roi_bgr.size == 0:
+        return 1
+    sat = colour_features(roi_bgr)['mean_saturation']
+    if sat >= _SAT_FRINGES:
+        return 5
+    gray = cv2.cvtColor(roi_bgr, cv2.COLOR_BGR2GRAY)
+    tex = edge_density(gray)
+    if tex >= _TEX_OPEN:
+        return 1
+    if tex >= _TEX_CLOSED:
+        return 2
+    if tex >= _TEX_WAVE:
+        return 3
+    return 4
+
+
+def thickness_from_colour(roi_bgr: np.ndarray) -> float:
+    """Provisional lipid thickness (nm) from interference-colour saturation.
+    SEAM: uncalibrated — not metrically valid until colour calibration (subsystem A)."""
+    if roi_bgr.size == 0:
+        return 10.0
+    sat = colour_features(roi_bgr)['mean_saturation']
+    nm = 15.0 + (sat / 255.0) * 90.0     # greyish (thin) -> ~15nm; saturated -> ~105nm
+    return float(np.clip(round(nm, 1), 10.0, 120.0))
