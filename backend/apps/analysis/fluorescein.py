@@ -46,3 +46,25 @@ def _fill(mask: np.ndarray) -> np.ndarray:
     if contours:
         cv2.drawContours(filled, contours, -1, 255, thickness=cv2.FILLED)
     return filled > 0
+
+
+# Provisional Oxford-grade bands by punctate-staining coverage (fraction of ROI area).
+# SEAM: a research heuristic only — replaced by the ML grader when graded data lands.
+_STAINING_BANDS = [0.0008, 0.004, 0.012, 0.03, 0.07]   # thresholds for grades 1..5
+
+
+def grade_staining(roi_bgr: np.ndarray) -> int:
+    """Provisional Oxford staining grade 0..5 from punctate bright-spot coverage.
+    Research heuristic, not clinically validated."""
+    if roi_bgr.size == 0:
+        return 0
+    hsv = cv2.cvtColor(roi_bgr, cv2.COLOR_BGR2HSV)
+    gray = cv2.cvtColor(roi_bgr, cv2.COLOR_BGR2GRAY)
+    # staining spots are bright AND high-value; threshold on brightness.
+    spots = gray >= max(float(np.percentile(gray, 99)), 180)
+    coverage = float(spots.sum()) / float(gray.size or 1)
+    grade = 0
+    for band in _STAINING_BANDS:
+        if coverage >= band:
+            grade += 1
+    return min(grade, 5)

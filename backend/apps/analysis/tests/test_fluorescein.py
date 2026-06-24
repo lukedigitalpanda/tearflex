@@ -36,3 +36,17 @@ def test_breakup_metric_rises_after_breakup():
     intact = breakup_metric(_roi(frames[2]))
     broken = breakup_metric(_roi(frames[29]))
     assert broken > intact + 0.05
+
+
+from apps.analysis.fluorescein import grade_staining
+
+
+def test_grade_staining_zero_for_clean_cornea():
+    assert grade_staining(make_staining_image(n_spots=0)) == 0
+
+
+def test_grade_staining_monotonic_with_spots():
+    g_few = grade_staining(make_staining_image(n_spots=2))
+    g_many = grade_staining(make_staining_image(n_spots=20))
+    assert 0 <= g_few <= g_many <= 5
+    assert g_many > g_few
