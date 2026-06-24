@@ -37,6 +37,7 @@ interface CaptureResult {
   dry_eye_severity: Severity | null;
   confidence_score: number | null;
   analysed_at: string;
+  analysis_version: string;
 }
 
 interface CaptureDetail {
@@ -157,6 +158,9 @@ export default function ResultsScreen() {
     });
   }
 
+  const lipidProvisional =
+    (data?.result?.analysis_version ?? '').startsWith('lipid-v0');
+
   return (
     <SafeAreaView className="flex-1 bg-slate-50">
       <ScrollView
@@ -195,6 +199,11 @@ export default function ResultsScreen() {
               {result?.lipid_grade != null ? result.lipid_grade : '—'}
               <Text style={styles.gradeMax}>/5</Text>
             </Text>
+            {lipidProvisional && (
+              <Text className="mt-1 self-start rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                Provisional — pending validation
+              </Text>
+            )}
             <Text style={styles.gradeSubLabel}>Lipid layer classification</Text>
           </View>
         ) : null}
