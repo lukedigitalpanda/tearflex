@@ -20,6 +20,8 @@ def make_ring_image(
     """
     if center is None:
         center = (size // 2, size // 2)
+    # Normalize once so the drawn ellipse and the recorded ground truth agree.
+    axis_deg = steep_axis_deg % 180.0
     img = np.zeros((size, size, 3), dtype=np.uint8)
     for k in range(1, n_rings + 1):
         r = ring_step * k
@@ -27,7 +29,7 @@ def make_ring_image(
         semi_flat = int(round(r * (1.0 + astigmatism / 2.0)))
         # cv2.ellipse axes = (half-length along `angle` direction, perpendicular).
         # Put the smaller (steep) axis along steep_axis_deg.
-        cv2.ellipse(img, center, (semi_steep, semi_flat), steep_axis_deg,
+        cv2.ellipse(img, center, (semi_steep, semi_flat), axis_deg,
                     0, 360, (210, 210, 210), thickness, cv2.LINE_AA)
     if blur > 0:
         img = cv2.GaussianBlur(img, (0, 0), blur)
@@ -35,7 +37,7 @@ def make_ring_image(
         'center': center,
         'n_rings': n_rings,
         'ring_step': ring_step,
-        'steep_axis_deg': steep_axis_deg % 180.0,
+        'steep_axis_deg': axis_deg,
         'astigmatism': astigmatism,
     }
     return img, ground_truth
