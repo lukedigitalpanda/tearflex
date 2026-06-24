@@ -1,6 +1,7 @@
 import logging
 from django.core.files.base import ContentFile
 from .nibut import analyse_nibut
+from .fluorescein import analyse_fluorescein
 from .utils import extract_frames, pil_image_to_django_file
 
 logger = logging.getLogger(__name__)
@@ -55,15 +56,34 @@ def _analyse_nibut(video_path: str) -> dict:
 
 
 def _analyse_fluorescein(video_path: str) -> dict:
-    """Fluorescein analysis — algorithmic stub. Phase 2 will implement full detection."""
-    logger.info("Fluorescein analysis: returning placeholder (Phase 2 implementation pending)")
+    """Run fluorescein analysis pipeline. Returns TestResult field dict + heatmap_bytes."""
+    frames = extract_frames(video_path, target_fps=10.0)
+    result = analyse_fluorescein(frames, fps=10.0)
+
+    heatmap_bytes = pil_image_to_django_file(result['heatmap_image'])
+
+    first_bu = result['first_breakup_seconds']
+    # Fluorescein break-up time bands mirror the NIBUT severity mapping.
+    if first_bu >= 10:
+        severity = 'normal'
+    elif first_bu >= 5:
+        severity = 'mild'
+    elif first_bu >= 2:
+        severity = 'moderate'
+    else:
+        severity = 'severe'
+
     return {
-        'fluorescein_grade': 1,
-        'fluorescein_breakup_seconds': 8.0,
-        'dry_eye_severity': 'mild',
-        'confidence_score': 0.1,
-        'analysis_version': 'fluorescein-stub-v1',
-        'raw_output': {'note': 'Phase 1 placeholder'},
+        'fluorescein_breakup_seconds': result['first_breakup_seconds'],
+        'fluorescein_grade': result['fluorescein_grade'],
+        'heatmap_bytes': heatmap_bytes,
+        'dry_eye_severity': severity,
+        'confidence_score': result['confidence'],
+        'analysis_version': 'fluorescein-v0.1',
+        'raw_output': {
+            'grade_provisional': result['grade_provisional'],
+            'frame_metrics': result['frame_metrics'],
+        },
     }
 
 

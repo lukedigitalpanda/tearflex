@@ -1,0 +1,71 @@
+import numpy as np
+from PIL import Image
+from apps.analysis.tests.synthetic_fluorescein import make_dyed_film_clip, make_staining_image
+from apps.analysis.fluorescein import (
+    detect_tearfilm_roi, breakup_metric, grade_staining, analyse_fluorescein,
+)
+
+
+def test_dyed_film_clip_shape_and_breakup_progression():
+    frames = make_dyed_film_clip(n_frames=30, size=200, break_at=15, n_holes=6)
+    assert len(frames) == 30
+    assert frames[0].shape == (200, 200, 3)
+    assert frames[0].dtype == np.uint8
+    # An early (intact) frame is brighter overall than a late (broken-up) frame.
+    assert frames[2].mean() > frames[29].mean()
+
+
+def test_staining_image_more_spots_more_bright_area():
+    none = make_staining_image(n_spots=0, size=200)
+    many = make_staining_image(n_spots=12, size=200)
+    bright = lambda im: int((im.max(axis=2) > 180).sum())
+    assert bright(many) > bright(none)
+
+
+def _roi(frame):
+    x, y, w, h = detect_tearfilm_roi(frame)
+    return frame[y:y + h, x:x + w]
+
+
+def test_detect_tearfilm_roi_covers_disc():
+    frames = make_dyed_film_clip(n_frames=4, size=200, break_at=99)  # no break-up
+    x, y, w, h = detect_tearfilm_roi(frames[0])
+    # ROI should be a sizeable central box around the disc, not the whole frame nor empty.
+    assert 40 < w < 200 and 40 < h < 200
+
+
+def test_breakup_metric_rises_after_breakup():
+    frames = make_dyed_film_clip(n_frames=30, size=200, break_at=15, n_holes=6)
+    intact = breakup_metric(_roi(frames[2]))
+    broken = breakup_metric(_roi(frames[29]))
+    assert broken > intact + 0.05
+
+
+def test_grade_staining_zero_for_clean_cornea():
+    assert grade_staining(make_staining_image(n_spots=0)) == 0
+
+
+def test_grade_staining_monotonic_with_spots():
+    g_few = grade_staining(make_staining_image(n_spots=2))
+    g_many = grade_staining(make_staining_image(n_spots=20))
+    assert 0 <= g_few <= g_many <= 5
+    assert g_many > g_few
+
+
+def test_analyse_fluorescein_recovers_breakup_time():
+    frames = make_dyed_film_clip(n_frames=30, size=200, break_at=15, n_holes=6)
+    res = analyse_fluorescein(frames, fps=10.0)
+    for key in ('first_breakup_seconds', 'mean_breakup_seconds', 'fluorescein_grade',
+                'grade_provisional', 'heatmap_image', 'confidence', 'frame_metrics'):
+        assert key in res
+    assert res['grade_provisional'] is True
+    assert isinstance(res['heatmap_image'], Image.Image)
+    assert 0.0 <= res['confidence'] <= 1.0
+    # break-up begins around frame 15 (= 1.5s at 10fps); allow detector latency.
+    assert 1.0 <= res['first_breakup_seconds'] <= 2.5
+
+
+def test_analyse_fluorescein_stable_clip_no_early_breakup():
+    frames = make_dyed_film_clip(n_frames=30, size=200, break_at=99)  # never breaks up
+    res = analyse_fluorescein(frames, fps=10.0)
+    assert res['first_breakup_seconds'] >= 2.5   # ~video duration, no early break-up

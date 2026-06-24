@@ -74,3 +74,20 @@ def test_pil_image_to_django_file_returns_png_bytes():
     data = pil_image_to_django_file(img)
     assert isinstance(data, bytes)
     assert data[:4] == b'\x89PNG'
+
+
+from apps.analysis.utils import detect_breakup_times
+
+
+def test_detect_breakup_times_first_crossing():
+    # 5 baseline frames at 0, then a sustained jump above threshold from index 10.
+    series = [0.0] * 10 + [2.0] * 10
+    first, mean = detect_breakup_times(series, fps=10.0)
+    assert first == 1.0           # index 10 / 10 fps
+    assert mean >= first
+
+
+def test_detect_breakup_times_no_breakup_returns_duration():
+    series = [0.0] * 20
+    first, mean = detect_breakup_times(series, fps=10.0)
+    assert first == round((len(series) - 1) / 10.0, 2)   # 1.9

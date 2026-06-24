@@ -36,6 +36,7 @@ interface CaptureResult {
   lipid_thickness_nm: number | null;
   dry_eye_severity: Severity | null;
   confidence_score: number | null;
+  analysis_version: string;
   analysed_at: string;
 }
 
@@ -127,6 +128,9 @@ export default function ResultsScreen() {
     }
   }
 
+  const fluoresceinProvisional =
+    (data?.result?.analysis_version ?? '').startsWith('fluorescein-v0');
+
   // Build metrics grid items depending on test type
   const metricsItems: Array<{ label: string; value: string; unit?: string }> = [];
 
@@ -187,6 +191,11 @@ export default function ResultsScreen() {
               <Text style={styles.gradeMax}>/5</Text>
             </Text>
             <Text style={styles.gradeSubLabel}>Fluorescein staining</Text>
+            {fluoresceinProvisional && (
+              <Text className="mt-1 self-start rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                Provisional — pending validation
+              </Text>
+            )}
           </View>
         ) : resolvedTestType === 'lipid' ? (
           <View style={styles.gradeCard}>
