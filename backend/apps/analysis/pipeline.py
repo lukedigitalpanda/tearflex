@@ -1,6 +1,7 @@
 import logging
 from django.core.files.base import ContentFile
 from .nibut import analyse_nibut
+from .lipid import analyse_lipid
 from .utils import extract_frames, pil_image_to_django_file
 
 logger = logging.getLogger(__name__)
@@ -68,13 +69,31 @@ def _analyse_fluorescein(video_path: str) -> dict:
 
 
 def _analyse_lipid(video_path: str) -> dict:
-    """Lipid layer analysis — algorithmic stub. Phase 2 will implement full detection."""
-    logger.info("Lipid analysis: returning placeholder (Phase 2 implementation pending)")
+    """Run lipid analysis pipeline. Returns TestResult field dict (provisional)."""
+    frames = extract_frames(video_path, target_fps=10.0)
+    result = analyse_lipid(frames, fps=10.0)
+
+    # A thicker/normal lipid layer (higher Guillon grade) maps to lower dry-eye severity;
+    # a very thin layer (grade 1) maps to higher severity. Provisional mapping.
+    grade = result['lipid_grade']
+    if grade >= 4:
+        severity = 'normal'
+    elif grade == 3:
+        severity = 'mild'
+    elif grade == 2:
+        severity = 'moderate'
+    else:
+        severity = 'severe'
+
     return {
-        'lipid_grade': 2,
-        'lipid_thickness_nm': 30.0,
-        'dry_eye_severity': 'normal',
-        'confidence_score': 0.1,
-        'analysis_version': 'lipid-stub-v1',
-        'raw_output': {'note': 'Phase 1 placeholder'},
+        'lipid_grade': result['lipid_grade'],
+        'lipid_thickness_nm': result['lipid_thickness_nm'],
+        'dry_eye_severity': severity,
+        'confidence_score': result['confidence'],
+        'analysis_version': 'lipid-v0.1',
+        'raw_output': {
+            'grade_provisional': result['grade_provisional'],
+            'thickness_provisional': result['thickness_provisional'],
+            'features': result['features'],
+        },
     }
