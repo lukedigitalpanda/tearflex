@@ -3,7 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import type { TestType } from '@shared/types/assessment';
 
-const INSTRUCTIONS: Record<TestType, { title: string; steps: string[] }> = {
+const INSTRUCTIONS: Record<TestType | 'topography', { title: string; steps: string[] }> = {
   nibut: {
     title: 'NIBUT Capture',
     steps: [
@@ -34,12 +34,22 @@ const INSTRUCTIONS: Record<TestType, { title: string; steps: string[] }> = {
       'Tap record when the lipid pattern is stable and in focus.',
     ],
   },
+  topography: {
+    title: 'Corneal Topography Capture',
+    steps: [
+      'Ensure the Placido disc attachment is firmly clipped onto the rear camera.',
+      'Ask the patient to look directly at the central dot and open the eye wide.',
+      'Hold the phone steady so the rings are sharp and centred on the cornea.',
+      'Tap capture — a short video and a burst of still photos are taken together.',
+      'Keep still for the one to two seconds of capture.',
+    ],
+  },
 };
 
 export default function InstructionsScreen() {
   const { assessmentId, testType } = useLocalSearchParams<{
     assessmentId: string;
-    testType: TestType;
+    testType: TestType | 'topography';
   }>();
   const router = useRouter();
   const safeType = testType in INSTRUCTIONS ? testType : ('nibut' as TestType);
@@ -72,10 +82,11 @@ export default function InstructionsScreen() {
           className="bg-coral-500 rounded-xl py-4 items-center mt-6 mb-8"
           activeOpacity={0.8}
           onPress={() =>
-            router.push({
-              pathname: '/assessment/capture',
-              params: { assessmentId, testType },
-            })
+            router.push(
+              safeType === 'topography'
+                ? { pathname: '/assessment/topography-capture', params: { assessmentId } }
+                : { pathname: '/assessment/capture', params: { assessmentId, testType } },
+            )
           }
         >
           <Text className="text-white font-semibold text-base">I'm ready — start capture</Text>
