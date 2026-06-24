@@ -70,3 +70,24 @@ def test_create_scan_rejects_too_many_stills(api, clinician):
             'stills': [_png(f's{i}.png') for i in range(21)],
         }, format='multipart')
     assert resp.status_code == 400
+
+
+@pytest.mark.django_db
+def test_list_scans_filtered_by_assessment(api, clinician):
+    a1 = AssessmentFactory(patient__practice=clinician.practice)
+    a2 = AssessmentFactory(patient__practice=clinician.practice)
+    s1 = TopographyScan.objects.create(assessment=a1, status='analysed')
+    TopographyScan.objects.create(assessment=a2, status='analysed')
+    resp = api.get(f'/api/topography/scans/?assessment={a1.id}')
+    assert resp.status_code == 200
+    ids = [row['id'] for row in resp.data['results']]
+    assert ids == [s1.id]
+
+
+@pytest.mark.django_db
+def test_list_scans_scoped_to_practice(api):
+    other = AssessmentFactory()
+    TopographyScan.objects.create(assessment=other, status='analysed')
+    resp = api.get(f'/api/topography/scans/?assessment={other.id}')
+    assert resp.status_code == 200
+    assert resp.data['results'] == []

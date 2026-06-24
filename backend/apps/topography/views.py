@@ -16,9 +16,23 @@ def _require_assessment_access(user, assessment):
         raise PermissionDenied()
 
 
-class TopographyScanCreateView(generics.CreateAPIView):
-    serializer_class = TopographyScanCreateSerializer
+class TopographyScanListCreateView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return TopographyScanCreateSerializer
+        return TopographyScanSerializer
+
+    def get_queryset(self):
+        qs = scope_queryset(
+            TopographyScan.objects.select_related('result').prefetch_related('stills'),
+            self.request.user, 'assessment__patient__practice',
+        )
+        assessment_id = self.request.query_params.get('assessment')
+        if assessment_id:
+            qs = qs.filter(assessment_id=assessment_id)
+        return qs
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
