@@ -2,49 +2,15 @@ import cv2
 import numpy as np
 from PIL import Image
 import logging
-from .utils import detect_placido_roi, edge_density, normalise_distortions
+from .utils import (
+    detect_placido_roi, edge_density, normalise_distortions,
+    detect_breakup_times, N_BASELINE,
+)
 
 logger = logging.getLogger(__name__)
 
-N_BASELINE = 5
-BREAKUP_THRESHOLD_MULTIPLIER = 1.5
-MIN_NIBUT_SECONDS = 0.3
-
 COLOUR_STABLE = (200, 100, 30)   # BGR: orange-blue gradient start (stable tear film)
 COLOUR_BREAKUP = (30, 30, 220)   # BGR: red (tear film break-up)
-
-
-def detect_breakup_times(
-    distortions: list[float],
-    fps: float,
-    n_baseline: int = N_BASELINE,
-    threshold_multiplier: float = BREAKUP_THRESHOLD_MULTIPLIER,
-) -> tuple[float, float]:
-    """
-    Given normalised distortion scores and fps, return (first_breakup_seconds, mean_breakup_seconds).
-    If no break-up detected, first_breakup equals video duration.
-    """
-    # distortions are z-scores relative to baseline (see normalise_distortions).
-    # A score of 1.5 means 1.5 standard deviations above baseline mean.
-    threshold = threshold_multiplier
-    first_breakup: float | None = None
-    breakup_times: list[float] = []
-
-    for i, d in enumerate(distortions[n_baseline:], start=n_baseline):
-        t = i / fps
-        if d >= threshold:
-            if first_breakup is None and t >= MIN_NIBUT_SECONDS:
-                first_breakup = t
-            breakup_times.append(t)
-
-    if first_breakup is None:
-        if breakup_times:
-            first_breakup = breakup_times[0]  # all frames exceeded threshold but t < MIN_NIBUT_SECONDS
-        else:
-            first_breakup = (len(distortions) - 1) / fps
-
-    mean_breakup = float(np.mean(breakup_times)) if breakup_times else first_breakup
-    return (round(first_breakup, 2), round(mean_breakup, 2))
 
 
 def generate_nibut_heatmap(

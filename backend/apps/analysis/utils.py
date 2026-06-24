@@ -92,6 +92,41 @@ def normalise_distortions(raw_densities: list[float], n_baseline: int = 5) -> li
     return [(d - mean) / std for d in raw_densities]
 
 
+N_BASELINE = 5
+BREAKUP_THRESHOLD_MULTIPLIER = 1.5
+MIN_BREAKUP_SECONDS = 0.3
+
+
+def detect_breakup_times(
+    distortions: list[float],
+    fps: float,
+    n_baseline: int = N_BASELINE,
+    threshold_multiplier: float = BREAKUP_THRESHOLD_MULTIPLIER,
+) -> tuple[float, float]:
+    """Given a normalised metric series (z-scores) and fps, return
+    (first_breakup_seconds, mean_breakup_seconds). If no break-up is detected,
+    first_breakup equals the video duration. Shared by NIBUT and fluorescein."""
+    threshold = threshold_multiplier
+    first_breakup: float | None = None
+    breakup_times: list[float] = []
+
+    for i, d in enumerate(distortions[n_baseline:], start=n_baseline):
+        t = i / fps
+        if d >= threshold:
+            if first_breakup is None and t >= MIN_BREAKUP_SECONDS:
+                first_breakup = t
+            breakup_times.append(t)
+
+    if first_breakup is None:
+        if breakup_times:
+            first_breakup = breakup_times[0]
+        else:
+            first_breakup = (len(distortions) - 1) / fps
+
+    mean_breakup = float(np.mean(breakup_times)) if breakup_times else first_breakup
+    return (round(first_breakup, 2), round(mean_breakup, 2))
+
+
 def pil_image_to_django_file(img: Image.Image) -> bytes:
     """Serialise a PIL image to PNG bytes for saving to a Django ImageField."""
     buf = io.BytesIO()
