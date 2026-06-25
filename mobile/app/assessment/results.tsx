@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
+  Alert,
 } from 'react-native';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
@@ -117,23 +118,31 @@ export default function ResultsScreen() {
     const pdfUrl = await generateAndGetUrl(data.assessment);
     if (!pdfUrl) return;
 
-    const localUri = (FileSystem.cacheDirectory ?? '') + `report_${data.assessment}.pdf`;
-    await FileSystem.downloadAsync(pdfUrl, localUri);
+    try {
+      const localUri = (FileSystem.cacheDirectory ?? '') + `report_${data.assessment}.pdf`;
+      await FileSystem.downloadAsync(pdfUrl, localUri);
 
-    const canShare = await Sharing.isAvailableAsync();
-    if (canShare) {
-      await Sharing.shareAsync(localUri, {
-        mimeType: 'application/pdf',
-        dialogTitle: 'Share tear film report',
-      });
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(localUri, {
+          mimeType: 'application/pdf',
+          dialogTitle: 'Share tear film report',
+        });
+      }
+    } catch {
+      Alert.alert('Could not share report', 'Something went wrong saving or sharing the report. Please try again.');
     }
   }
 
   async function handleShareVideo(videoUrl: string) {
-    const localUri = (FileSystem.cacheDirectory ?? '') + `capture_video_${captureId}.mp4`;
-    await FileSystem.downloadAsync(videoUrl, localUri);
-    if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(localUri, { mimeType: 'video/mp4', dialogTitle: 'Save or share video' });
+    try {
+      const localUri = (FileSystem.cacheDirectory ?? '') + `capture_video_${captureId}.mp4`;
+      await FileSystem.downloadAsync(videoUrl, localUri);
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(localUri, { mimeType: 'video/mp4', dialogTitle: 'Save or share video' });
+      }
+    } catch {
+      Alert.alert('Could not share video', 'Something went wrong saving or sharing the video. Please try again.');
     }
   }
 

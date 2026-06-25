@@ -1,4 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native'
+import { Alert } from 'react-native'
 
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }: { children: React.ReactNode }) => children,
@@ -33,4 +34,13 @@ it('downloads then shares the stored video', async () => {
   fireEvent.press(screen.getByLabelText('Save or share video'))
   await waitFor(() => expect(mockDownloadAsync).toHaveBeenCalledWith('https://cdn/v.mp4', expect.stringContaining('file://cache/')))
   await waitFor(() => expect(mockShareAsync).toHaveBeenCalledWith(expect.stringContaining('capture_video_9.mp4'), expect.anything()))
+})
+
+it('shows an alert when the video download fails', async () => {
+  mockDownloadAsync.mockRejectedValueOnce(new Error('net'))
+  const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {})
+  render(<ResultsScreen />)
+  fireEvent.press(screen.getByLabelText('Save or share video'))
+  await waitFor(() => expect(alertSpy).toHaveBeenCalledWith('Could not share video', expect.any(String)))
+  alertSpy.mockRestore()
 })
