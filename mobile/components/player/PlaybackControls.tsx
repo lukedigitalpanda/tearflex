@@ -27,7 +27,7 @@ function Btn({ label, onPress }: { label: string; onPress: () => void }) {
 
 export function PlaybackControls({
   playing,
-  looping: _looping,
+  looping,
   onPlayPause,
   onToggleLoop,
   onStepBack,
@@ -41,7 +41,17 @@ export function PlaybackControls({
       <Btn label="Previous frame" onPress={onStepBack} />
       <Btn label={playing ? 'Pause' : 'Play'} onPress={onPlayPause} />
       <Btn label="Next frame" onPress={onStepForward} />
-      {showLoop && <Btn label="Toggle loop" onPress={onToggleLoop} />}
+      {showLoop && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Toggle loop"
+          accessibilityState={{ selected: looping }}
+          onPress={onToggleLoop}
+          style={looping ? styles.btnActive : styles.btn}
+        >
+          <Text style={looping ? styles.labelActive : styles.label}>Toggle loop</Text>
+        </Pressable>
+      )}
       {showCapture && <Btn label="Capture frame" onPress={onCaptureFrame} />}
     </View>
   )
@@ -59,9 +69,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
+  btnActive: {
+    borderRadius: 6,
+    backgroundColor: '#0E7C7B', // teal-600
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
   label: {
     fontSize: 12,
     fontWeight: '600',
     color: '#334155', // slate-700
+  },
+  labelActive: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF', // white
   },
 })

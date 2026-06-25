@@ -29,4 +29,11 @@ describe('PlaybackControls', () => {
     expect(screen.queryByLabelText('Capture frame')).toBeNull()
     expect(screen.queryByLabelText('Toggle loop')).toBeNull()
   })
+
+  it('reflects loop state via accessibilityState', () => {
+    const { rerender } = render(<PlaybackControls {...base} looping />)
+    expect(screen.getByLabelText('Toggle loop').props.accessibilityState).toMatchObject({ selected: true })
+    rerender(<PlaybackControls {...base} looping={false} />)
+    expect(screen.getByLabelText('Toggle loop').props.accessibilityState).toMatchObject({ selected: false })
+  })
 })
