@@ -32,5 +32,5 @@ it('downloads then shares the stored video', async () => {
   render(<ResultsScreen />)
   fireEvent.press(screen.getByLabelText('Save or share video'))
   await waitFor(() => expect(mockDownloadAsync).toHaveBeenCalledWith('https://cdn/v.mp4', expect.stringContaining('file://cache/')))
-  await waitFor(() => expect(mockShareAsync).toHaveBeenCalledWith('file://cache/capture_video.mp4', expect.anything()))
+  await waitFor(() => expect(mockShareAsync).toHaveBeenCalledWith(expect.stringContaining('capture_video_9.mp4'), expect.anything()))
 })

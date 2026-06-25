@@ -130,7 +130,7 @@ export default function ResultsScreen() {
   }
 
   async function handleShareVideo(videoUrl: string) {
-    const localUri = (FileSystem.cacheDirectory ?? '') + 'capture_video.mp4';
+    const localUri = (FileSystem.cacheDirectory ?? '') + `capture_video_${captureId}.mp4`;
     await FileSystem.downloadAsync(videoUrl, localUri);
     if (await Sharing.isAvailableAsync()) {
       await Sharing.shareAsync(localUri, { mimeType: 'video/mp4', dialogTitle: 'Save or share video' });
