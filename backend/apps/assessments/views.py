@@ -93,7 +93,8 @@ class ManualCaptureCreateView(generics.GenericAPIView):
             capture = TestCapture.objects.create(
                 assessment=assessment,
                 test_type=data['test_type'],
-                source='manual',
+                source=data['source'],
+                video_file=data.get('video_file'),
                 status='analysed',
             )
 

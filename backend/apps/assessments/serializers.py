@@ -56,6 +56,15 @@ class AssessmentSerializer(serializers.ModelSerializer):
 class ManualCaptureSerializer(serializers.Serializer):
     assessment = serializers.PrimaryKeyRelatedField(queryset=Assessment.objects.all())
     test_type = serializers.ChoiceField(choices=TestCapture.TEST_TYPE_CHOICES)
+    video_file = serializers.FileField(required=False, allow_null=True)
+    source = serializers.ChoiceField(
+        choices=[
+            ('mobile', 'Mobile camera'),
+            ('upload', 'Uploaded file'),
+            ('manual', 'Manual entry (no video)'),
+        ],
+        required=False, allow_null=True,
+    )
     nibut_first_breakup_seconds = serializers.FloatField(required=False, allow_null=True)
     nibut_mean_breakup_seconds = serializers.FloatField(required=False, allow_null=True)
     fluorescein_grade = serializers.IntegerField(required=False, allow_null=True)
@@ -69,6 +78,19 @@ class ManualCaptureSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {'nibut_first_breakup_seconds': 'This field is required for NIBUT tests.'}
             )
+        video = data.get('video_file')
+        source = data.get('source')
+        if video is not None:
+            if source not in ('mobile', 'upload'):
+                raise serializers.ValidationError(
+                    {'source': "When a video is attached, source must be 'mobile' or 'upload'."}
+                )
+        else:
+            if source is not None and source != 'manual':
+                raise serializers.ValidationError(
+                    {'source': "Without a video, source must be 'manual' or omitted."}
+                )
+            data['source'] = 'manual'
         return data
 
 
