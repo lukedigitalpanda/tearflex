@@ -24,6 +24,12 @@ describe('UploadReviewStep', () => {
 
   it('disables actions when busy', () => {
     render(<UploadReviewStep src="blob:abc" onCaptureFrame={vi.fn()} onAuto={vi.fn()} onManual={vi.fn()} busy />)
-    expect(screen.getByRole('button', { name: /auto-analyse/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /uploading/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /enter manually/i })).toBeDisabled()
+  })
+
+  it('shows "Uploading…" on the auto button when busy', () => {
+    render(<UploadReviewStep src="blob:abc" onCaptureFrame={vi.fn()} onAuto={vi.fn()} onManual={vi.fn()} busy />)
+    expect(screen.getByRole('button', { name: /uploading/i })).toBeDisabled()
   })
 })

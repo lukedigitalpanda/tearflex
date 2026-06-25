@@ -22,7 +22,7 @@ export function UploadReviewStep({ src, onCaptureFrame, onAuto, onManual, busy, 
           Enter manually
         </Button>
         <Button type="button" className="flex-1 bg-teal-600 hover:bg-teal-700" onClick={onAuto} disabled={busy}>
-          Auto-analyse
+          {busy ? 'Uploading…' : 'Auto-analyse'}
         </Button>
       </div>
     </div>
