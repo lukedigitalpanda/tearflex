@@ -220,6 +220,11 @@ existing `ApiError` path.
   (like the manual stepper does). For this slice the manual branch handles only the
   **selected** test type's fields (one video = one capture). Expanding it to all test
   types is a deliberate future enhancement, deferred to keep this slice tractable.
+- **Video playback + MP4 download on the assessment detail page — PARKED (revisit after
+  this slice).** The uploaded/captured video is already stored (`capture.video_file`).
+  A follow-up should surface it on the assessment detail view — viewable (player) and
+  downloadable as an `.mp4`, in its own card beneath the results / alongside the PDF
+  report card. Deferred so this slice stays focused on the upload/review flow itself.
 - Chunked / resumable upload and hard client-side size caps — a plain `video/*` filter
   only. (Large-file robustness is a later concern.)
 - Webcam capture on web — excluded from the whole feature (no Placido attachment on
