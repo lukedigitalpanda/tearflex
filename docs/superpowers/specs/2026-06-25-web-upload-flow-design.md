@@ -215,6 +215,11 @@ existing `ApiError` path.
 
 ## Out of scope (YAGNI / later)
 
+- **Multi-test manual entry in the upload branch — PARKED (revisit later).** Ideally the
+  manual branch after an upload could capture all three test types' results in one go
+  (like the manual stepper does). For this slice the manual branch handles only the
+  **selected** test type's fields (one video = one capture). Expanding it to all test
+  types is a deliberate future enhancement, deferred to keep this slice tractable.
 - Chunked / resumable upload and hard client-side size caps — a plain `video/*` filter
   only. (Large-file robustness is a later concern.)
 - Webcam capture on web — excluded from the whole feature (no Placido attachment on
