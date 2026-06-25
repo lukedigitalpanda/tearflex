@@ -5,6 +5,7 @@ import { StepNibut } from './steps/StepNibut'
 import { StepFluorescein } from './steps/StepFluorescein'
 import { StepLipid } from './steps/StepLipid'
 import { StepReview } from './steps/StepReview'
+import { UploadAssessmentFlow } from './UploadAssessmentFlow'
 import type { EyeStepData, NibutStepData, FluoresceinStepData, LipidStepData } from '@/lib/schemas'
 
 const STEP_LABELS = ['Eye', 'NIBUT', 'Fluorescein', 'Lipid', 'Review'] as const
@@ -19,6 +20,7 @@ interface StepData {
 export function NewAssessmentStepper({ patientId }: { patientId: number }) {
   const [step, setStep] = useState(0)
   const [data, setData] = useState<StepData>({ eye: null, nibut: null, fluorescein: null, lipid: null })
+  const [mode, setMode] = useState<'choose' | 'manual' | 'upload'>('choose')
 
   return (
     <div className="mx-auto max-w-lg space-y-8">
@@ -46,14 +48,36 @@ export function NewAssessmentStepper({ patientId }: { patientId: number }) {
       {step === 0 && (
         <StepEye
           defaultValues={data.eye}
-          onNext={(d) => { setData((p) => ({ ...p, eye: d })); setStep(1) }}
+          onNext={(d) => { setData((p) => ({ ...p, eye: d })); setStep(1); setMode('choose') }}
         />
       )}
-      {step === 1 && (
+
+      {step === 1 && mode === 'choose' && data.eye && (
+        <div className="space-y-4">
+          <p className="text-sm font-medium">How do you want to record this assessment?</p>
+          <div className="flex gap-3">
+            <button type="button" onClick={() => setMode('upload')}
+              className="flex-1 rounded-lg border-2 border-border px-4 py-6 text-sm font-semibold hover:border-teal-300">
+              Upload a video
+            </button>
+            <button type="button" onClick={() => setMode('manual')}
+              className="flex-1 rounded-lg border-2 border-border px-4 py-6 text-sm font-semibold hover:border-teal-300">
+              Enter results manually
+            </button>
+          </div>
+          <button type="button" onClick={() => setStep(0)} className="text-xs text-muted-foreground underline">Back</button>
+        </div>
+      )}
+
+      {step === 1 && mode === 'upload' && data.eye && (
+        <UploadAssessmentFlow patientId={patientId} eye={data.eye.eye} />
+      )}
+
+      {step === 1 && mode === 'manual' && (
         <StepNibut
           defaultValues={data.nibut}
           onNext={(d) => { setData((p) => ({ ...p, nibut: d })); setStep(2) }}
-          onBack={() => setStep(0)}
+          onBack={() => { setMode('choose') }}
         />
       )}
       {step === 2 && (
