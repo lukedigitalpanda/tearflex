@@ -10,7 +10,7 @@ import { useCaptureStatus } from '@/hooks/useCaptures';
 export default function ProcessingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { captureId, testType } = useLocalSearchParams<{ assessmentId: string; captureId: string; testType: string }>();
+  const { assessmentId, captureId, testType, videoUri, source } = useLocalSearchParams<{ assessmentId: string; captureId: string; testType: string; videoUri: string; source: string }>();
   const id = captureId ? Number(captureId) : null;
   const { data, isTimedOut } = useCaptureStatus(id);
   const status = data?.status;
@@ -40,7 +40,13 @@ export default function ProcessingScreen() {
             {isTimedOut ? 'This is taking longer than expected.' : 'Something went wrong.'} Please try again.
           </Text>
           <View style={styles.buttonGroup}>
-            <TouchableOpacity style={styles.retryButton} onPress={() => router.back()} activeOpacity={0.8}>
+            {/* Return to review (not back()) — review was replaced off the stack; stills captured in the prior review pass are not restored (non-fatal). */}
+            <TouchableOpacity
+              accessibilityRole="button"
+              style={styles.retryButton}
+              onPress={() => router.replace({ pathname: '/assessment/review', params: { assessmentId, testType, videoUri, source } })}
+              activeOpacity={0.8}
+            >
               <Text style={styles.retryButtonText}>Try again</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.cancelButton} onPress={() => router.replace('/(tabs)/')} activeOpacity={0.8}>

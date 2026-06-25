@@ -24,6 +24,8 @@ export default function ReviewScreen() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const stills = useRef<CapturedFrame[]>([])
+  const manualCaptureId = useRef<number | null>(null)
+  const stillsUploaded = useRef(false)
 
   const aId = Number(assessmentId)
   const tType = testType as TestType
@@ -39,7 +41,7 @@ export default function ReviewScreen() {
     try {
       const cap = await uploadAuto.mutateAsync({ assessmentId: aId, testType: tType, source: src, videoUri })
       await uploadStills(cap.id)
-      router.replace({ pathname: '/assessment/processing', params: { assessmentId, captureId: String(cap.id), testType } })
+      router.replace({ pathname: '/assessment/processing', params: { assessmentId, captureId: String(cap.id), testType, videoUri, source } })
     } catch {
       setError('Upload failed. Please try again.'); setBusy(false)
     }
@@ -48,11 +50,17 @@ export default function ReviewScreen() {
   const handleManual = async (fields: ManualResultFields) => {
     setBusy(true); setError(null)
     try {
-      const cap = await uploadManual.mutateAsync({ assessmentId: aId, testType: tType, source: src, videoUri, results: fields as Record<string, number> })
-      await uploadStills(cap.id)
+      if (manualCaptureId.current === null) {
+        const cap = await uploadManual.mutateAsync({ assessmentId: aId, testType: tType, source: src, videoUri, results: fields as Record<string, number> })
+        manualCaptureId.current = cap.id
+      }
+      if (!stillsUploaded.current) {
+        await uploadStills(manualCaptureId.current!)
+        stillsUploaded.current = true
+      }
       await api.patch(`assessments/${assessmentId}/`, { status: 'complete' })
       api.post('reports/generate/', { assessment: aId }).catch(() => {})
-      router.replace({ pathname: '/assessment/results', params: { captureId: String(cap.id), testType } })
+      router.replace({ pathname: '/assessment/results', params: { captureId: String(manualCaptureId.current), testType } })
     } catch {
       setError('Saving failed. Please try again.'); setBusy(false)
     }
