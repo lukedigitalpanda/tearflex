@@ -4,6 +4,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react-nativ
 const mockPlayer = {
   play: jest.fn(), pause: jest.fn(), seekBy: jest.fn(),
   currentTime: 4, duration: 25, playbackRate: 1, loop: true,
+  timeUpdateEventInterval: 0,
 }
 jest.mock('expo-video', () => {
   const { View } = require('react-native')
@@ -24,12 +25,18 @@ import { MobileVideoReviewPlayer } from './MobileVideoReviewPlayer'
 beforeEach(() => {
   jest.clearAllMocks()
   mockPlayer.currentTime = 4
+  mockPlayer.timeUpdateEventInterval = 0
 })
 
 describe('MobileVideoReviewPlayer', () => {
   it('renders the video view on the given source', () => {
     render(<MobileVideoReviewPlayer source="file:///v.mp4" onCaptureFrame={jest.fn()} />)
     expect(screen.getByTestId('video-view')).toBeOnTheScreen()
+  })
+
+  it('enables timeUpdate by setting a non-zero interval (so the scrub bar tracks playback)', () => {
+    render(<MobileVideoReviewPlayer source="file:///v.mp4" onCaptureFrame={jest.fn()} />)
+    expect(mockPlayer.timeUpdateEventInterval).toBeGreaterThan(0)
   })
 
   it('play button plays the player; frame-step seeks by 1/fps', () => {

@@ -45,6 +45,9 @@ export function MobileVideoReviewPlayer({
   const player = useVideoPlayer(source, (p) => {
     p.loop = initiallyLooping
     p.playbackRate = initialRate
+    // Without a non-zero interval, expo-video never emits `timeUpdate`, so the
+    // scrub bar would never track playback position on-device.
+    p.timeUpdateEventInterval = 0.25
   })
 
   const [playing, setPlaying] = useState(false)
