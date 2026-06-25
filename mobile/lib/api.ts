@@ -90,12 +90,13 @@ export const api = {
     path: string,
     fields: Record<string, string>,
     file: { uri: string; name: string; type: string },
+    fileField: string = 'video_file',
   ): Promise<T> => {
     const { access } = await getTokens();
     const formData = new FormData();
     Object.entries(fields).forEach(([key, val]) => formData.append(key, val));
     // React Native FormData accepts { uri, name, type } objects directly
-    formData.append('video_file', { uri: file.uri, name: file.name, type: file.type } as unknown as Blob);
+    formData.append(fileField, { uri: file.uri, name: file.name, type: file.type } as unknown as Blob);
 
     const res = await fetch(`${API_BASE}/${path.replace(/^\//, '')}`, {
       method: 'POST',
