@@ -9,6 +9,7 @@ import { ScrubBar } from './ScrubBar'
 import { FrameStep } from './FrameStep'
 import { useVideoFrame, type CapturedFrame } from './useVideoFrame'
 import { DEFAULT_FPS } from './constants'
+import { clampTime } from './player-logic'
 
 export interface VideoReviewPlayerProps {
   source: string
@@ -65,9 +66,10 @@ export function VideoReviewPlayer({
   const seek = (t: number) => {
     const v = videoRef.current
     if (!v) return
-    v.currentTime = t
-    setCurrent(t)
-    if (ended && t < duration) setEnded(false)
+    const ct = clampTime(t, duration)
+    v.currentTime = ct
+    setCurrent(ct)
+    if (ended && ct < duration) setEnded(false)
   }
 
   const handleCapture = async () => {
@@ -83,7 +85,7 @@ export function VideoReviewPlayer({
   if (errored) {
     return (
       <div role="alert" className="rounded-md bg-slate-50 p-6 text-sm text-slate-600">
-        Couldn't load this video
+        Couldn&apos;t load this video
       </div>
     )
   }
@@ -127,6 +129,7 @@ export function VideoReviewPlayer({
           playing={playing}
           ended={ended}
           looping={looping}
+          showLoop={mode === 'review'}
           onPlayPause={handlePlayPause}
           onReplay={handleReplay}
           onToggleLoop={() => setLooping((l) => !l)}

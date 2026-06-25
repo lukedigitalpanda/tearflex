@@ -65,4 +65,21 @@ describe('VideoReviewPlayer', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(/couldn.t load this video/i)
     expect(onError).toHaveBeenCalledOnce()
   })
+
+  it('compact mode does not show the loop toggle', () => {
+    render(<VideoReviewPlayer source="blob:abc" mode="compact" />)
+    expect(screen.queryByRole('button', { name: 'Toggle loop' })).toBeNull()
+  })
+
+  it('review mode shows the loop toggle', () => {
+    render(<VideoReviewPlayer source="blob:abc" mode="review" />)
+    expect(screen.getByRole('button', { name: 'Toggle loop' })).toBeInTheDocument()
+  })
+
+  it('compact mode expand button calls onExpand once', async () => {
+    const onExpand = vi.fn()
+    render(<VideoReviewPlayer source="blob:abc" mode="compact" onExpand={onExpand} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Expand' }))
+    expect(onExpand).toHaveBeenCalledOnce()
+  })
 })

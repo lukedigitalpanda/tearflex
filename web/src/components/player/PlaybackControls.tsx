@@ -6,6 +6,7 @@ export function PlaybackControls({
   playing,
   ended,
   looping,
+  showLoop = true,
   onPlayPause,
   onReplay,
   onToggleLoop,
@@ -13,6 +14,7 @@ export function PlaybackControls({
   playing: boolean
   ended: boolean
   looping: boolean
+  showLoop?: boolean
   onPlayPause: () => void
   onReplay: () => void
   onToggleLoop: () => void
@@ -33,15 +35,17 @@ export function PlaybackControls({
           {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
         </button>
       )}
-      <button
-        type="button"
-        aria-label="Toggle loop"
-        aria-pressed={looping}
-        onClick={onToggleLoop}
-        className={looping ? 'rounded p-1 text-teal-600' : 'rounded p-1 text-slate-400'}
-      >
-        <Repeat className="h-5 w-5" />
-      </button>
+      {showLoop && (
+        <button
+          type="button"
+          aria-label="Toggle loop"
+          aria-pressed={looping}
+          onClick={onToggleLoop}
+          className={looping ? 'rounded p-1 text-teal-600' : 'rounded p-1 text-slate-400'}
+        >
+          <Repeat className="h-5 w-5" />
+        </button>
+      )}
     </div>
   )
 }
