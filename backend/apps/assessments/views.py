@@ -1,15 +1,16 @@
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
+from django.shortcuts import get_object_or_404
 from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from apps.accounts.scoping import accessible_practice_ids, scope_queryset
-from .models import Assessment, TestCapture, TestResult
+from .models import Assessment, TestCapture, TestResult, CaptureStill
 from .serializers import (
     AssessmentSerializer, AssessmentListSerializer,
     TestCaptureSerializer, TestCaptureUploadSerializer,
-    ManualCaptureSerializer,
+    ManualCaptureSerializer, CaptureStillSerializer,
 )
 from .tasks import process_capture
 
@@ -72,6 +73,25 @@ class CaptureDetailView(generics.RetrieveAPIView):
         return scope_queryset(
             TestCapture.objects.all(), self.request.user, 'assessment__patient__practice',
         )
+
+
+class CaptureStillListCreateView(generics.ListCreateAPIView):
+    """List or attach clinician-selected still frames for a capture."""
+    serializer_class = CaptureStillSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = None  # Stills per capture are small/bounded; no pagination needed
+
+    def _get_capture(self):
+        qs = scope_queryset(
+            TestCapture.objects.all(), self.request.user, 'assessment__patient__practice',
+        )
+        return get_object_or_404(qs, pk=self.kwargs['pk'])
+
+    def get_queryset(self):
+        return CaptureStill.objects.filter(capture=self._get_capture())
+
+    def perform_create(self, serializer):
+        serializer.save(capture=self._get_capture())
 
 
 class ManualCaptureCreateView(generics.GenericAPIView):

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Assessment, TestCapture, TestResult
+from .models import Assessment, TestCapture, TestResult, CaptureStill
 
 
 class TestResultSerializer(serializers.ModelSerializer):
@@ -14,15 +14,25 @@ class TestResultSerializer(serializers.ModelSerializer):
         ]
 
 
+class CaptureStillSerializer(serializers.ModelSerializer):
+    timestamp_seconds = serializers.FloatField(min_value=0)
+
+    class Meta:
+        model = CaptureStill
+        fields = ['id', 'capture', 'image', 'timestamp_seconds', 'label', 'width', 'height', 'created_at']
+        read_only_fields = ['id', 'capture', 'created_at']
+
+
 class TestCaptureSerializer(serializers.ModelSerializer):
     result = TestResultSerializer(read_only=True)
+    stills = CaptureStillSerializer(many=True, read_only=True)
 
     class Meta:
         model = TestCapture
         fields = [
             'id', 'assessment', 'test_type', 'source', 'video_file', 'thumbnail',
             'duration_seconds', 'resolution_width', 'resolution_height',
-            'fps', 'device_model', 'status', 'captured_at', 'result',
+            'fps', 'device_model', 'status', 'captured_at', 'result', 'stills',
         ]
         read_only_fields = ['id', 'status', 'captured_at', 'thumbnail', 'source']
 
