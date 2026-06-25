@@ -19,4 +19,12 @@ describe('useCaptureStatus', () => {
     renderHook(() => useCaptureStatus(null), { wrapper: makeWrapper() })
     expect(spy).not.toHaveBeenCalled()
   })
+
+  it('reports isTimedOut=true when timeoutMs=0 and status is still processing', async () => {
+    // Strategy: pass timeoutMs=0 so the timeout is already exceeded after the first settled fetch.
+    // This avoids fake-timer / React Query interplay issues.
+    vi.spyOn(api, 'get').mockResolvedValue({ id: 9, status: 'processing' })
+    const { result } = renderHook(() => useCaptureStatus(9, 0), { wrapper: makeWrapper() })
+    await waitFor(() => expect(result.current.isTimedOut).toBe(true))
+  })
 })

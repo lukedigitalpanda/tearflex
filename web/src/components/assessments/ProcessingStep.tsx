@@ -1,9 +1,10 @@
 'use client'
 import { useEffect } from 'react'
+import { Button } from '@/components/ui/button'
 import { useCaptureStatus } from '@/hooks/useCaptures'
 
-export function ProcessingStep({ captureId, onAnalysed }: { captureId: number; onAnalysed: () => void }) {
-  const { data } = useCaptureStatus(captureId)
+export function ProcessingStep({ captureId, onAnalysed, onRetry }: { captureId: number; onAnalysed: () => void; onRetry: () => void }) {
+  const { data, isTimedOut } = useCaptureStatus(captureId)
   const status = data?.status
 
   useEffect(() => {
@@ -11,7 +12,21 @@ export function ProcessingStep({ captureId, onAnalysed }: { captureId: number; o
   }, [status, onAnalysed])
 
   if (status === 'failed') {
-    return <p className="py-10 text-center text-sm text-red-500">Analysis failed. Please try again.</p>
+    return (
+      <div className="py-10 text-center space-y-4">
+        <p className="text-sm text-red-500">Analysis failed.</p>
+        <Button type="button" className="bg-teal-600 hover:bg-teal-700" onClick={onRetry}>Retry</Button>
+      </div>
+    )
+  }
+
+  if (isTimedOut) {
+    return (
+      <div className="py-10 text-center space-y-4">
+        <p className="text-sm text-muted-foreground">This is taking longer than expected.</p>
+        <Button type="button" className="bg-teal-600 hover:bg-teal-700" onClick={onRetry}>Retry</Button>
+      </div>
+    )
   }
 
   return (

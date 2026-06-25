@@ -1,5 +1,5 @@
 'use client'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { api } from '@/lib/api'
@@ -35,6 +35,8 @@ export function UploadAssessmentFlow({ patientId, eye }: { patientId: number; ey
   const fileRef = useRef<File | null>(null)
   const stillsRef = useRef<CapturedFrame[]>([])
   const assessmentIdRef = useRef<number | null>(null)
+
+  useEffect(() => { return () => { if (src) URL.revokeObjectURL(src) } }, [src])
 
   const ensureAssessment = async (): Promise<number> => {
     if (assessmentIdRef.current !== null) return assessmentIdRef.current
@@ -125,5 +127,5 @@ export function UploadAssessmentFlow({ patientId, eye }: { patientId: number; ey
   }
 
   // processing
-  return <ProcessingStep captureId={captureId!} onAnalysed={handleAnalysed} />
+  return <ProcessingStep captureId={captureId!} onAnalysed={handleAnalysed} onRetry={() => { setCaptureId(null); setPhase('review') }} />
 }

@@ -1,7 +1,11 @@
 'use client'
+import { useEffect, useRef } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import type { TestCapture } from '@shared/types/assessment'
+
+const POLL_INTERVAL_MS = 2000
+const POLL_TIMEOUT_MS = 120000
 
 interface UploadCaptureInput {
   assessment: number
@@ -78,14 +82,28 @@ interface CaptureStatusResponse {
   result?: unknown
 }
 
-export function useCaptureStatus(captureId: number | null) {
-  return useQuery({
+export function useCaptureStatus(captureId: number | null, timeoutMs: number = POLL_TIMEOUT_MS) {
+  const startRef = useRef<number | null>(null)
+  useEffect(() => { startRef.current = captureId === null ? null : Date.now() }, [captureId])
+
+  const query = useQuery({
     queryKey: ['capture-status', captureId],
     enabled: captureId !== null,
     queryFn: () => api.get<CaptureStatusResponse>(`assessments/captures/${captureId}/status/`),
     refetchInterval: (query) => {
       const status = query.state.data?.status
-      return status === 'analysed' || status === 'failed' ? false : 2000
+      if (status === 'analysed' || status === 'failed') return false
+      if (startRef.current !== null && Date.now() - startRef.current >= timeoutMs) return false
+      return POLL_INTERVAL_MS
     },
   })
+
+  const status = query.data?.status
+  const isTimedOut =
+    status !== 'analysed' &&
+    status !== 'failed' &&
+    startRef.current !== null &&
+    Date.now() - startRef.current >= timeoutMs
+
+  return { ...query, isTimedOut }
 }
