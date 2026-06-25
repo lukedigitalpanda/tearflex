@@ -1,5 +1,5 @@
 'use client'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import type { TestCapture } from '@shared/types/assessment'
 
@@ -68,6 +68,24 @@ export function useCreateCaptureStill() {
       }
       if (input.label) fields.label = input.label
       return api.postMultipart<{ id: number }>(`assessments/captures/${input.captureId}/stills/`, fields)
+    },
+  })
+}
+
+interface CaptureStatusResponse {
+  id: number
+  status: string
+  result?: unknown
+}
+
+export function useCaptureStatus(captureId: number | null) {
+  return useQuery({
+    queryKey: ['capture-status', captureId],
+    enabled: captureId !== null,
+    queryFn: () => api.get<CaptureStatusResponse>(`assessments/captures/${captureId}/status/`),
+    refetchInterval: (query) => {
+      const status = query.state.data?.status
+      return status === 'analysed' || status === 'failed' ? false : 2000
     },
   })
 }
