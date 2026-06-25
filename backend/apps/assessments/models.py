@@ -44,7 +44,11 @@ class TestCapture(models.Model):
     test_type = models.CharField(max_length=20, choices=TEST_TYPE_CHOICES)
     source = models.CharField(
         max_length=10,
-        choices=[('mobile', 'Mobile'), ('manual', 'Manual')],
+        choices=[
+            ('mobile', 'Mobile camera'),
+            ('upload', 'Uploaded file'),
+            ('manual', 'Manual entry (no video)'),
+        ],
         default='mobile',
     )
     video_file = models.FileField(upload_to='captures/%Y/%m/%d/', blank=True, null=True)

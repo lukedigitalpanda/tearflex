@@ -28,10 +28,15 @@ class TestCaptureSerializer(serializers.ModelSerializer):
 
 
 class TestCaptureUploadSerializer(serializers.ModelSerializer):
-    """Serializer for video upload endpoint."""
+    """Serializer for video upload endpoint (auto-analysis path)."""
+    source = serializers.ChoiceField(
+        choices=[('mobile', 'Mobile camera'), ('upload', 'Uploaded file')],
+        required=False, default='mobile',
+    )
+
     class Meta:
         model = TestCapture
-        fields = ['id', 'assessment', 'test_type', 'video_file', 'device_model']
+        fields = ['id', 'assessment', 'test_type', 'video_file', 'device_model', 'source']
 
 
 class AssessmentSerializer(serializers.ModelSerializer):
