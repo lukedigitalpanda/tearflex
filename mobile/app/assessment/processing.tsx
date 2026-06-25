@@ -3,122 +3,53 @@ import {
   View, Text, TouchableOpacity, BackHandler, StyleSheet, ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useCapture, type CapturePhase } from '@/hooks/useCapture';
-import { api, AuthExpiredError } from '@/lib/api';
-import { useAuthStore } from '@/store/auth';
-import type { TestType } from '@shared/types/assessment';
-
-type CaptureStatusResponse = { status: string };
-
-const TEST_TYPES: ReadonlySet<TestType> = new Set(['nibut', 'fluorescein', 'lipid']);
-
-function isTestType(value: string): value is TestType {
-  return TEST_TYPES.has(value as TestType);
-}
+import { useCaptureStatus } from '@/hooks/useCaptures';
 
 export default function ProcessingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { assessmentId, testType, videoUri } = useLocalSearchParams<{
-    assessmentId: string;
-    testType: string;
-    videoUri: string;
-  }>();
+  const { assessmentId, captureId, testType, videoUri, source } = useLocalSearchParams<{ assessmentId: string; captureId: string; testType: string; videoUri: string; source: string }>();
+  const id = captureId ? Number(captureId) : null;
+  const { data, isTimedOut } = useCaptureStatus(id);
+  const status = data?.status;
 
-  const { phase, captureId, error, upload } = useCapture();
-
-  // Upload once on mount; upload is stable (useCallback with no deps)
+  // Block Android back while still processing
   useEffect(() => {
-    if (!assessmentId || !videoUri) { router.replace('/(tabs)/'); return; }
-    if (!testType || !isTestType(testType)) { router.replace('/(tabs)/'); return; }
-    const resolvedTestType = testType as TestType;
-    upload({ assessmentId: Number(assessmentId), testType: resolvedTestType, videoUri })
-      .catch((e: unknown) => {
-        if (e instanceof AuthExpiredError) {
-          useAuthStore.getState().clear();
-        }
-        // Other errors are handled inside the hook (sets phase to 'error')
-      });
-  }, [assessmentId, videoUri, testType, upload, router]);
-
-  // Block Android hardware back during upload/polling
-  useEffect(() => {
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (phase === 'uploading' || phase === 'polling') {
-        return true; // block back
-      }
-      return false;
-    });
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => status !== 'analysed' && status !== 'failed' && !isTimedOut);
     return () => sub.remove();
-  }, [phase]);
+  }, [status, isTimedOut]);
 
-  // Poll capture status once upload is done (phase === 'polling' and captureId is set)
-  const { data: statusData } = useQuery<CaptureStatusResponse>({
-    queryKey: ['capture-status', captureId],
-    queryFn: () => {
-      if (captureId === null) throw new Error('captureId is null');
-      return api.get<CaptureStatusResponse>(`assessments/captures/${captureId}/status/`);
-    },
-    enabled: phase === 'polling' && captureId !== null,
-    refetchInterval: (query) => {
-      const s = query.state.data?.status;
-      if (s === 'analysed' || s === 'failed') return false;
-      return 2000;
-    },
-  });
-
-  // Navigate to results when analysis is complete
   useEffect(() => {
-    if (statusData?.status === 'analysed' && captureId !== null) {
-      router.replace({
-        pathname: '/assessment/results',
-        params: {
-          captureId: String(captureId),
-          testType: testType ?? '',
-        },
-      });
+    if (status === 'analysed' && id !== null) {
+      router.replace({ pathname: '/assessment/results', params: { captureId: String(id), testType: testType ?? '' } });
     }
-  }, [statusData?.status, captureId, router, testType]);
+  }, [status, id, router, testType]);
 
-  const isError = phase === 'error' || statusData?.status === 'failed';
-
-  const phaseSubtitles: Record<CapturePhase, string> = {
-    idle: 'Preparing...',
-    uploading: 'Uploading video...',
-    polling: 'Running analysis...',
-    done: 'Done',
-    error: '',
-  };
-  const subtitle = phaseSubtitles[phase];
+  const isError = status === 'failed' || isTimedOut;
 
   if (isError) {
     return (
       <View style={styles.container}>
         <StatusBar hidden />
         <View style={[styles.content, { paddingTop: insets.top, paddingBottom: insets.bottom + 24 }]}>
-          <View style={styles.errorIcon}>
-            <Text style={styles.errorIconText}>✕</Text>
-          </View>
-          <Text style={styles.title}>Analysis failed</Text>
+          <View style={styles.errorIcon}><Text style={styles.errorIconText}>✕</Text></View>
+          <Text style={styles.title}>{isTimedOut ? 'Still processing' : 'Analysis failed'}</Text>
           <Text style={styles.subtitle}>
-            {error ?? 'Something went wrong. Please try again.'}
+            {isTimedOut ? 'This is taking longer than expected.' : 'Something went wrong.'} Please try again.
           </Text>
           <View style={styles.buttonGroup}>
+            {/* Return to review (not back()) — review was replaced off the stack; stills captured in the prior review pass are not restored (non-fatal). */}
             <TouchableOpacity
+              accessibilityRole="button"
               style={styles.retryButton}
-              onPress={() => router.back()}
+              onPress={() => router.replace({ pathname: '/assessment/review', params: { assessmentId, testType, videoUri, source } })}
               activeOpacity={0.8}
             >
               <Text style={styles.retryButtonText}>Try again</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={() => router.replace('/(tabs)/')}
-              activeOpacity={0.8}
-            >
+            <TouchableOpacity style={styles.cancelButton} onPress={() => router.replace('/(tabs)/')} activeOpacity={0.8}>
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
           </View>
@@ -133,7 +64,7 @@ export default function ProcessingScreen() {
       <View style={[styles.content, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         <ActivityIndicator size="large" color="#0E7C7B" />
         <Text style={styles.title}>Analysing tear film...</Text>
-        <Text style={styles.subtitle}>{subtitle}</Text>
+        <Text style={styles.subtitle}>Running analysis...</Text>
       </View>
     </View>
   );

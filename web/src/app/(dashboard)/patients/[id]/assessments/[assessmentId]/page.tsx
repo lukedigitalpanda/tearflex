@@ -4,6 +4,7 @@ import { useAssessment } from '@/hooks/useAssessments'
 import { usePractice } from '@/hooks/usePractice'
 import { useReports, downloadReportUrl } from '@/hooks/useReports'
 import { ResultsDisplay } from '@/components/assessments/ResultsDisplay'
+import { VideoReviewPlayer } from '@/components/player/VideoReviewPlayer'
 import { GenerateReportButton } from '@/components/reports/GenerateReportButton'
 import { CompareButton } from '@/components/reports/CompareButton'
 import { Button } from '@/components/ui/button'
@@ -60,6 +61,15 @@ export default function AssessmentDetailPage({ params }: { params: { assessmentI
               {c.result
                 ? <ResultsDisplay result={c.result} thresholds={thresholds} />
                 : <EmptyState title="Capture not yet analysed" />}
+              {c.video_file && (
+                <div className="space-y-2 rounded-lg border border-border p-3">
+                  <VideoReviewPlayer source={c.video_file} mode="compact" />
+                  <a href={c.video_file} download
+                    className="inline-flex text-sm font-medium text-teal-600 hover:underline">
+                    Download .mp4
+                  </a>
+                </div>
+              )}
             </div>
           ))}
     </div>
