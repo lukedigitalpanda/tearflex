@@ -1,5 +1,5 @@
 'use client'
-import { useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { api } from '@/lib/api'
@@ -49,6 +49,10 @@ export function UploadAssessmentFlow({ patientId, eye }: { patientId: number; ey
   }
 
   const detail = (id: number) => `/patients/${patientId}/assessments/${id}`
+
+  const handleAnalysed = useCallback(() => {
+    router.push(`/patients/${patientId}/assessments/${assessmentIdRef.current!}`)
+  }, [router, patientId])
 
   const handleAuto = async () => {
     setBusy(true); setError(null)
@@ -121,5 +125,5 @@ export function UploadAssessmentFlow({ patientId, eye }: { patientId: number; ey
   }
 
   // processing
-  return <ProcessingStep captureId={captureId!} onAnalysed={() => router.push(detail(assessmentIdRef.current!))} />
+  return <ProcessingStep captureId={captureId!} onAnalysed={handleAnalysed} />
 }
