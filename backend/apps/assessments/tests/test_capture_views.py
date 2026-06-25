@@ -103,3 +103,14 @@ def test_upload_with_source_manual_is_rejected(api, clinician):
             'video_file': _video(), 'source': 'manual',
         }, format='multipart')
     assert resp.status_code == 400
+
+
+@pytest.mark.django_db
+def test_upload_without_video_file_is_rejected(api, clinician):
+    patient = PatientFactory(practice=clinician.practice)
+    assessment = AssessmentFactory(patient=patient, clinician=clinician)
+    resp = api.post('/api/assessments/captures/', {
+        'assessment': assessment.id, 'test_type': 'nibut', 'source': 'upload',
+    }, format='multipart')
+    assert resp.status_code == 400
+    assert 'video_file' in resp.data

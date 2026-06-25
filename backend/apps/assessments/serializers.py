@@ -39,6 +39,7 @@ class TestCaptureSerializer(serializers.ModelSerializer):
 
 class TestCaptureUploadSerializer(serializers.ModelSerializer):
     """Serializer for video upload endpoint (auto-analysis path)."""
+    video_file = serializers.FileField(required=True, allow_null=False)
     source = serializers.ChoiceField(
         choices=[('mobile', 'Mobile camera'), ('upload', 'Uploaded file')],
         required=False, default='mobile',
