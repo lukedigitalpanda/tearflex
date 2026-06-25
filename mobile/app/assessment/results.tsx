@@ -16,6 +16,7 @@ import { api } from '@/lib/api';
 import { useGeneratePDFReport } from '@/hooks/useReports';
 import { NIBUTResult } from '@/components/results/NIBUTResult';
 import { MetricsGrid } from '@/components/results/MetricsGrid';
+import { MobileVideoReviewPlayer } from '@/components/player/MobileVideoReviewPlayer';
 import type { Severity } from '@/constants/colours';
 import { colours } from '@/constants/colours';
 
@@ -46,6 +47,7 @@ interface CaptureDetail {
   status: 'uploaded' | 'processing' | 'analysed' | 'failed';
   captured_at: string;
   result: CaptureResult | null;
+  video_file: string | null;
 }
 
 export default function ResultsScreen() {
@@ -124,6 +126,14 @@ export default function ResultsScreen() {
         mimeType: 'application/pdf',
         dialogTitle: 'Share tear film report',
       });
+    }
+  }
+
+  async function handleShareVideo(videoUrl: string) {
+    const localUri = (FileSystem.cacheDirectory ?? '') + 'capture_video.mp4';
+    await FileSystem.downloadAsync(videoUrl, localUri);
+    if (await Sharing.isAvailableAsync()) {
+      await Sharing.shareAsync(localUri, { mimeType: 'video/mp4', dialogTitle: 'Save or share video' });
     }
   }
 
@@ -215,6 +225,22 @@ export default function ResultsScreen() {
             </Text>
           </View>
         )}
+
+        {/* Video player + share */}
+        {data?.video_file ? (
+          <View style={{ gap: 12, marginTop: 16 }}>
+            <MobileVideoReviewPlayer source={data.video_file} mode="compact" onCaptureFrame={() => {}} />
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="Save or share video"
+              onPress={() => handleShareVideo(data.video_file!)}
+              activeOpacity={0.8}
+              style={{ alignItems: 'center', backgroundColor: '#0E7C7B', paddingVertical: 12, borderRadius: 10 }}
+            >
+              <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Save / share video (.mp4)</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
 
         {/* Action bar */}
         <View style={styles.actionBar}>
