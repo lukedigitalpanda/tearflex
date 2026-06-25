@@ -1,10 +1,19 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react-native'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react-native'
 
 // --- mock expo-video with a controllable player ---
-const mockPlayer = {
+// `addListener` records callbacks so tests can fire native events (e.g. playToEnd).
+const mockPlayer: any = {
   play: jest.fn(), pause: jest.fn(), seekBy: jest.fn(),
   currentTime: 4, duration: 25, playbackRate: 1, loop: true,
   timeUpdateEventInterval: 0,
+  _listeners: {} as Record<string, (payload?: any) => void>,
+  addListener: jest.fn((event: string, cb: (payload?: any) => void) => {
+    mockPlayer._listeners[event] = cb
+    return { remove: jest.fn() }
+  }),
+}
+function firePlayerEvent(event: string, payload?: any) {
+  act(() => { mockPlayer._listeners[event]?.(payload) })
 }
 jest.mock('expo-video', () => {
   const { View } = require('react-native')
@@ -26,12 +35,23 @@ beforeEach(() => {
   jest.clearAllMocks()
   mockPlayer.currentTime = 4
   mockPlayer.timeUpdateEventInterval = 0
+  mockPlayer.loop = true
+  mockPlayer._listeners = {}
 })
 
 describe('MobileVideoReviewPlayer', () => {
   it('renders the video view on the given source', () => {
     render(<MobileVideoReviewPlayer source="file:///v.mp4" onCaptureFrame={jest.fn()} />)
     expect(screen.getByTestId('video-view')).toBeOnTheScreen()
+  })
+
+  it('play-again: after a non-looping end, pressing Play restarts from 0', () => {
+    render(<MobileVideoReviewPlayer source="file:///v.mp4" initiallyLooping={false} onCaptureFrame={jest.fn()} />)
+    // playback reaches the end (loop is off, so the player does not auto-restart)
+    firePlayerEvent('playToEnd')
+    fireEvent.press(screen.getByLabelText('Play'))
+    expect(mockPlayer.currentTime).toBe(0)
+    expect(mockPlayer.play).toHaveBeenCalled()
   })
 
   it('enables timeUpdate by setting a non-zero interval (so the scrub bar tracks playback)', () => {

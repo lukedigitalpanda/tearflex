@@ -18,6 +18,7 @@ import type { CapturedFrame, PlayerMode } from './types'
 const EV_STATUS = 'statusChange' as const
 const EV_TIME = 'timeUpdate' as const
 const EV_PLAYING = 'playingChange' as const
+const EV_END = 'playToEnd' as const
 
 interface Props {
   source: string
@@ -54,6 +55,7 @@ export function MobileVideoReviewPlayer({
   const [looping, setLooping] = useState(initiallyLooping)
   const [speed, setSpeed] = useState<number>(initialRate)
   const [current, setCurrent] = useState(0)
+  const [ended, setEnded] = useState(false)
   const [errored, setErrored] = useState(false)
 
   // Guard against calling onError more than once (e.g. both load-error and thumbnail-error)
@@ -98,10 +100,19 @@ export function MobileVideoReviewPlayer({
         setPlaying(payload.isPlaying)
       },
     )
+    // When playback reaches the end without looping, mark ended so Play can
+    // restart from 0 (no dead-end). With loop on, the player auto-restarts.
+    const endSub = (player as any).addListener?.(EV_END, () => {
+      if (!player.loop) {
+        setEnded(true)
+        setPlaying(false)
+      }
+    })
     return () => {
       statusSub?.remove()
       timeSub?.remove()
       playingSub?.remove()
+      endSub?.remove()
     }
   }, [player, handleReady, handleError])
 
@@ -109,6 +120,15 @@ export function MobileVideoReviewPlayer({
   // Playback control handlers
   // ---------------------------------------------------------------------------
   const playPause = () => {
+    if (ended) {
+      // Play-again: restart from the start (no dead-end after a non-looping end).
+      player.currentTime = 0
+      setCurrent(0)
+      setEnded(false)
+      player.play()
+      setPlaying(true)
+      return
+    }
     if (playing) {
       player.pause()
       setPlaying(false)
@@ -131,6 +151,7 @@ export function MobileVideoReviewPlayer({
     const ct = clampTime(t, player.duration)
     player.currentTime = ct
     setCurrent(ct)
+    if (ended) setEnded(false)
   }
 
   const changeSpeed = (s: number) => {
