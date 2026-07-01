@@ -19,6 +19,12 @@ CONE_INTERNAL_DIAMETER_MM = 15.0   # narrow end, at the camera
 CONE_EXTERNAL_DIAMETER_MM = 70.0   # wide end, toward the eye
 CONE_HEIGHT_MM = 30.0              # axial depth narrow -> wide
 CONE_N_RINGS = 10
+# PLACEHOLDER camera-to-cornea working distance (mm). The cone (30 mm deep) braces
+# against the face, so the cornea sits just beyond the wide rim. This value is a
+# provisional stand-in until the CAD file / reference-sphere calibration pin it — a
+# ~1 mm error is ~3 D, so absolute keratometry stays screening-grade until then.
+# It must exceed the deepest ring depth so every per-ring object distance is positive.
+CONE_NOMINAL_WORKING_DISTANCE_MM = 35.0
 
 
 def default_cone_profile(n_rings: int = CONE_N_RINGS,

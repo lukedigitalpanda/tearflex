@@ -107,3 +107,18 @@ def test_list_scans_invalid_assessment_param(api, clinician):
     resp = api.get('/api/topography/scans/?assessment=notanint')
     assert resp.status_code == 200
     assert resp.data['results'] == []
+
+
+@pytest.mark.django_db
+def test_create_scan_stores_camera_focal_px(api, clinician):
+    assessment = AssessmentFactory(patient__practice=clinician.practice)
+    with patch('apps.topography.views.process_topography_scan.delay') as delay:
+        delay.return_value.id = 'task-focal'
+        resp = api.post('/api/topography/scans/', {
+            'assessment': assessment.id,
+            'camera_focal_px': 2500.0,
+            'stills': [_png('a.png')],
+        }, format='multipart')
+    assert resp.status_code == 201, resp.content
+    scan = TopographyScan.objects.get(id=resp.data['id'])
+    assert scan.camera_focal_px == 2500.0
