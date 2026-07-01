@@ -29,7 +29,8 @@ class TopographyScanSerializer(serializers.ModelSerializer):
         model = TopographyScan
         fields = [
             'id', 'assessment', 'video_file', 'device_model', 'phone_model_id',
-            'app_version', 'camera_focal_px', 'calibration_state', 'status', 'captured_at', 'stills', 'result',
+            'app_version', 'camera_focal_px', 'capture_width_px', 'capture_height_px',
+            'calibration_state', 'status', 'captured_at', 'stills', 'result',
         ]
         read_only_fields = ['status', 'calibration_state', 'captured_at']
 
@@ -42,10 +43,29 @@ class TopographyScanCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TopographyScan
-        fields = ['assessment', 'video_file', 'device_model', 'phone_model_id', 'app_version', 'camera_focal_px', 'stills']
+        fields = ['assessment', 'video_file', 'device_model', 'phone_model_id', 'app_version',
+                  'camera_focal_px', 'capture_width_px', 'capture_height_px', 'stills']
         extra_kwargs = {'assessment': {'write_only': True}}
 
     def validate_camera_focal_px(self, value):
         if value is not None and value <= 0:
             raise serializers.ValidationError("camera_focal_px must be positive.")
         return value
+
+    def validate_capture_width_px(self, value):
+        if value is not None and value <= 0:
+            raise serializers.ValidationError("capture_width_px must be positive.")
+        return value
+
+    def validate_capture_height_px(self, value):
+        if value is not None and value <= 0:
+            raise serializers.ValidationError("capture_height_px must be positive.")
+        return value
+
+    def validate(self, attrs):
+        w = attrs.get('capture_width_px')
+        h = attrs.get('capture_height_px')
+        if (w is None) != (h is None):
+            raise serializers.ValidationError(
+                "capture_width_px and capture_height_px must be provided together.")
+        return attrs

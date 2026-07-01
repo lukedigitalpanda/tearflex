@@ -76,8 +76,9 @@ def test_process_scan_no_stills_sets_failed():
 
 @pytest.mark.django_db
 def test_process_scan_calibrated_when_focal_px_present():
-    scan = TopographyScan.objects.create(assessment=AssessmentFactory(),
-                                         status='uploaded', camera_focal_px=1100.0)
+    scan = TopographyScan.objects.create(
+        assessment=AssessmentFactory(), status='uploaded',
+        camera_focal_px=1100.0, capture_width_px=800, capture_height_px=800)
     png, gt = _cone_png('cone.png', 1100.0)
     TopographyStill.objects.create(scan=scan, image=png, index=0)
 
@@ -88,6 +89,54 @@ def test_process_scan_calibrated_when_focal_px_present():
     assert scan.result.calibration_state == 'default'
     assert scan.calibration_state == 'default'
     assert abs(scan.result.central_k - gt['expected_power']) < 2.0
+
+
+@pytest.mark.django_db
+def test_process_scan_calibrated_with_downscaled_still():
+    """focal measured at 1600px capture, still delivered at 800px: the backend
+    rescales 2200 -> 1100 and still recovers the true power."""
+    scan = TopographyScan.objects.create(
+        assessment=AssessmentFactory(), status='uploaded',
+        camera_focal_px=2200.0, capture_width_px=1600, capture_height_px=1600)
+    png, gt = _cone_png('cone.png', 1100.0)  # still rendered at the effective focal
+    TopographyStill.objects.create(scan=scan, image=png, index=0)
+
+    process_topography_scan(scan.id)
+
+    scan.refresh_from_db()
+    assert scan.calibration_state == 'default'
+    assert abs(scan.result.central_k - gt['expected_power']) < 2.0
+
+
+@pytest.mark.django_db
+def test_process_scan_uncalibrated_on_aspect_mismatch():
+    """capture 4:3 but the analysed still is 1:1 (a crop) -> refuse to calibrate."""
+    scan = TopographyScan.objects.create(
+        assessment=AssessmentFactory(), status='uploaded',
+        camera_focal_px=1100.0, capture_width_px=1600, capture_height_px=1200)
+    png, _ = _cone_png('cone.png', 1100.0)  # 800x800 still
+    TopographyStill.objects.create(scan=scan, image=png, index=0)
+
+    process_topography_scan(scan.id)
+
+    scan.refresh_from_db()
+    assert scan.result.calibration_state == 'uncalibrated'
+    assert scan.calibration_state == 'uncalibrated'
+
+
+@pytest.mark.django_db
+def test_process_scan_uncalibrated_without_capture_resolution():
+    """camera_focal_px present but no capture resolution -> cannot verify -> uncalibrated."""
+    scan = TopographyScan.objects.create(
+        assessment=AssessmentFactory(), status='uploaded', camera_focal_px=1100.0)
+    png, _ = _cone_png('cone.png', 1100.0)
+    TopographyStill.objects.create(scan=scan, image=png, index=0)
+
+    process_topography_scan(scan.id)
+
+    scan.refresh_from_db()
+    assert scan.result.calibration_state == 'uncalibrated'
+    assert scan.calibration_state == 'uncalibrated'
 
 
 @pytest.mark.django_db
