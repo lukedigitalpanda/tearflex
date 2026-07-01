@@ -5,6 +5,7 @@ from apps.analysis.topography.rings import find_reflection_center, extract_rings
 from apps.analysis.topography.reconstruct import reconstruct_curvature
 from apps.analysis.topography.tests.synthetic import make_ring_image
 from apps.analysis.topography import optics
+from apps.analysis.topography.disc import default_cone_profile
 
 
 def _curv(astig, axis=0.0):
@@ -85,9 +86,60 @@ def test_uncalibrated_path_is_unchanged():
     assert out['scale'] == 4300.0
 
 
-def test_object_radii_length_must_match_rings():
+def test_too_few_object_radii_raises():
     rings = {'angles_deg': np.arange(0, 360, 2.0),
              'radii': np.full((180, 4), 30.0), 'n_rings': 4}
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="detected"):
         reconstruct_curvature(rings, distance_mm=40.0, focal_px=3000.0,
                               ring_object_radii_mm=[3.0, 6.0])  # only 2 for 4 rings
+
+
+def _cone_rings_for(radius_per_angle_mm, ring_radii_mm, ring_depths_mm, distance_mm, focal_px):
+    """rings dict for a cone: each ring imaged at its own object distance (working
+    distance minus the ring's axial depth)."""
+    angles = np.arange(0, 360, 2.0)
+    radii = np.empty((angles.size, len(ring_radii_mm)), dtype=np.float64)
+    for i, ang in enumerate(angles):
+        R = radius_per_angle_mm(ang)
+        for k, (h0, z) in enumerate(zip(ring_radii_mm, ring_depths_mm)):
+            radii[i, k] = optics.ring_radius_px(R, distance_mm, focal_px, h0,
+                                                object_distance_mm=distance_mm - z)
+    return {'angles_deg': angles, 'radii': radii, 'n_rings': len(ring_radii_mm)}
+
+
+def test_catadioptric_cone_recovers_spherical_power():
+    """Per-ring object distances (cone depths) recover the true power exactly."""
+    radii_mm, depths_mm = default_cone_profile()
+    d, f = 45.0, 2500.0
+    rings = _cone_rings_for(lambda a: 7.8, radii_mm, depths_mm, d, f)
+    obj_dist = [d - z for z in depths_mm]
+    out = reconstruct_curvature(rings, distance_mm=d, focal_px=f,
+                                ring_object_radii_mm=radii_mm,
+                                object_distance_mm=obj_dist)
+    assert np.allclose(out['power_per_angle'], optics.radius_to_power(7.8), atol=1e-3)
+    assert out['central_power'] == pytest.approx(optics.radius_to_power(7.8), abs=1e-3)
+
+
+def test_flat_object_distance_biases_cone_reconstruction():
+    """Ignoring cone depth (single flat object distance) materially biases the result
+    — this is why per-ring distances are needed."""
+    radii_mm, depths_mm = default_cone_profile()
+    d, f = 45.0, 2500.0
+    rings = _cone_rings_for(lambda a: 7.8, radii_mm, depths_mm, d, f)
+    flat = reconstruct_curvature(rings, distance_mm=d, focal_px=f,
+                                 ring_object_radii_mm=radii_mm)  # object_distance defaults to d
+    assert abs(flat['central_power'] - optics.radius_to_power(7.8)) > 1.0
+
+
+def test_catadioptric_uses_innermost_when_more_object_radii_supplied():
+    """The detector keeps the innermost n_rings rings, but the caller supplies the
+    Placido disc's full physical ring radii (innermost-first). Reconstruction must
+    pair the detected rings with the innermost physical radii and still recover the
+    true power — not crash on the count mismatch."""
+    detected_obj = [3.0, 6.0, 9.0, 12.0]                    # 4 rings actually detected
+    full_disc = [3.0, 6.0, 9.0, 12.0, 15.0, 18.0]           # disc has 6 physical rings
+    rings = _rings_for(lambda a: 7.8, detected_obj, 40.0, 3000.0)
+    out = reconstruct_curvature(rings, distance_mm=40.0, focal_px=3000.0,
+                                ring_object_radii_mm=full_disc)
+    assert np.allclose(out['power_per_angle'], 43.2692, atol=1e-3)
+    assert out['central_power'] == pytest.approx(43.2692, abs=1e-3)

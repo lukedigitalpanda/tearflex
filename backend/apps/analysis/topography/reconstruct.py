@@ -20,6 +20,10 @@ def reconstruct_curvature(rings: dict, scale: float = NOMINAL_DIOPTRE_SCALE, *,
     `ring_object_radii_mm` are all supplied — inverts the convex-mirror image
     formation per ring/meridian (see optics.py) to give metrically-valid dioptres.
     Otherwise falls back to the uncalibrated placeholder scale.
+
+    `ring_object_radii_mm` is the Placido disc's physical ring radii, innermost
+    first — pass the whole set; the ring extractor detects a data-dependent inner
+    subset per frame, and only the innermost `n_rings` radii are used to match it.
     """
     if distance_mm is not None and focal_px is not None and ring_object_radii_mm is not None:
         return _reconstruct_catadioptric(
@@ -50,13 +54,41 @@ def reconstruct_curvature(rings: dict, scale: float = NOMINAL_DIOPTRE_SCALE, *,
     }
 
 
+def _per_ring_object_distances(object_distance_mm, n_rings):
+    """Broadcast `object_distance_mm` to one value per ring (innermost-first).
+
+    None -> defaults to the working distance inside optics (flat disc). A scalar
+    applies to every ring. A sequence gives per-ring object distances (the cone case:
+    working distance minus each ring's axial depth); its innermost n_rings are used.
+    """
+    if object_distance_mm is None:
+        return [None] * n_rings
+    if isinstance(object_distance_mm, (list, tuple, np.ndarray)):
+        seq = list(object_distance_mm)
+        if len(seq) < n_rings:
+            raise ValueError(
+                f"object_distance_mm has {len(seq)} entries, but {n_rings} rings "
+                f"were detected")
+        return [None if v is None else float(v) for v in seq[:n_rings]]
+    return [float(object_distance_mm)] * n_rings
+
+
 def _reconstruct_catadioptric(rings, distance_mm, focal_px, object_radii_mm,
                               object_distance_mm, calibration_state):
     radii = rings['radii']
     n_rings = radii.shape[1]
-    if len(object_radii_mm) != n_rings:
+    # The extractor keeps the innermost n_rings rings that every spoke resolves
+    # (rings.py sorts ascending and truncates), and n_rings shrinks with image
+    # quality. Callers pass the disc's full physical ring radii (innermost-first),
+    # so pair the detected rings with the innermost physical radii. Only too few
+    # radii to explain the detected rings is an error.
+    if len(object_radii_mm) < n_rings:
         raise ValueError(
-            f"ring_object_radii_mm has {len(object_radii_mm)} entries, expected {n_rings}")
+            f"ring_object_radii_mm has {len(object_radii_mm)} entries, but "
+            f"{n_rings} rings were detected; supply at least one physical radius "
+            f"per detectable ring (innermost first)")
+    object_radii_mm = object_radii_mm[:n_rings]
+    object_distances = _per_ring_object_distances(object_distance_mm, n_rings)
     if radii.size == 0 or not np.all(radii > 0):
         raise ValueError("degenerate reconstruction: non-positive radii")
 
@@ -66,7 +98,7 @@ def _reconstruct_catadioptric(rings, distance_mm, focal_px, object_radii_mm,
     for i in range(n_angles):
         radius_estimates = [
             optics.corneal_radius_mm(radii[i, k], distance_mm, focal_px,
-                                     object_radii_mm[k], object_distance_mm)
+                                     object_radii_mm[k], object_distances[k])
             for k in range(n_rings)
         ]
         R_mean = float(np.mean(radius_estimates))

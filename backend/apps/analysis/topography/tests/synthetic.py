@@ -64,3 +64,27 @@ def make_physical_ring_image(corneal_radius_mm, distance_mm, focal_px, object_ra
         'expected_power': _optics.radius_to_power(corneal_radius_mm),
     }
     return img, ground_truth
+
+
+def make_cone_ring_image(corneal_radius_mm, distance_mm, focal_px, ring_radii_mm,
+                         ring_depths_mm, size=800, blur=1.5, thickness=2):
+    """Placido *cone* rings: each ring forward-modelled at its own object distance
+    (working distance minus the ring's axial depth), so only a per-ring reconstruction
+    recovers `corneal_radius_mm`. `ring_radii_mm`/`ring_depths_mm` are innermost-first."""
+    center = (size // 2, size // 2)
+    img = np.zeros((size, size, 3), dtype=np.uint8)
+    radii_px = [
+        _optics.ring_radius_px(corneal_radius_mm, distance_mm, focal_px, h0,
+                               object_distance_mm=distance_mm - z)
+        for h0, z in zip(ring_radii_mm, ring_depths_mm)
+    ]
+    for r in radii_px:
+        cv2.circle(img, center, int(round(r)), (210, 210, 210), thickness, cv2.LINE_AA)
+    if blur > 0:
+        img = cv2.GaussianBlur(img, (0, 0), blur)
+    ground_truth = {
+        'center': center,
+        'radii_px': radii_px,
+        'expected_power': _optics.radius_to_power(corneal_radius_mm),
+    }
+    return img, ground_truth
