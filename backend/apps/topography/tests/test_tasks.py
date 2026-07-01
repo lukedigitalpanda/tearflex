@@ -4,13 +4,24 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from conftest import AssessmentFactory
 from apps.topography.models import TopographyScan, TopographyStill
 from apps.topography.tasks import process_topography_scan
-from apps.analysis.topography.tests.synthetic import make_ring_image
+from apps.analysis.topography.tests.synthetic import make_ring_image, make_cone_ring_image
+from apps.analysis.topography.disc import default_cone_profile, CONE_NOMINAL_WORKING_DISTANCE_MM
 
 
 def _png(name, blur):
     img, _ = make_ring_image(size=400, n_rings=6, blur=blur)
     ok, buf = cv2.imencode('.png', img)
     return SimpleUploadedFile(name, buf.tobytes(), content_type='image/png')
+
+
+def _cone_png(name, focal_px):
+    """A synthetic Placido-cone still rendered at the nominal working distance, so the
+    calibrated path should recover ~43.27 D. Returns (uploaded_file, ground_truth)."""
+    radii, depths = default_cone_profile()
+    img, gt = make_cone_ring_image(7.8, CONE_NOMINAL_WORKING_DISTANCE_MM, focal_px,
+                                   radii, depths, size=800)
+    ok, buf = cv2.imencode('.png', img)
+    return SimpleUploadedFile(name, buf.tobytes(), content_type='image/png'), gt
 
 
 @pytest.mark.django_db
@@ -61,3 +72,31 @@ def test_process_scan_no_stills_sets_failed():
         process_topography_scan(scan.id)
     scan.refresh_from_db()
     assert scan.status == 'failed'
+
+
+@pytest.mark.django_db
+def test_process_scan_calibrated_when_focal_px_present():
+    scan = TopographyScan.objects.create(assessment=AssessmentFactory(),
+                                         status='uploaded', camera_focal_px=1100.0)
+    png, gt = _cone_png('cone.png', 1100.0)
+    TopographyStill.objects.create(scan=scan, image=png, index=0)
+
+    process_topography_scan(scan.id)
+
+    scan.refresh_from_db()
+    assert scan.status == 'analysed'
+    assert scan.result.calibration_state == 'default'
+    assert scan.calibration_state == 'default'
+    assert abs(scan.result.central_k - gt['expected_power']) < 2.0
+
+
+@pytest.mark.django_db
+def test_process_scan_uncalibrated_without_focal_px():
+    scan = TopographyScan.objects.create(assessment=AssessmentFactory(), status='uploaded')
+    TopographyStill.objects.create(scan=scan, image=_png('crisp.png', 1.0), index=0)
+
+    process_topography_scan(scan.id)
+
+    scan.refresh_from_db()
+    assert scan.result.calibration_state == 'uncalibrated'
+    assert scan.calibration_state == 'uncalibrated'

@@ -5,6 +5,7 @@ from celery import shared_task
 from django.core.files.base import ContentFile
 from apps.analysis.topography.frames import select_best_frame, sharpness
 from apps.analysis.topography.pipeline import analyse_topography_frame
+from apps.analysis.topography.disc import default_cone_profile, CONE_NOMINAL_WORKING_DISTANCE_MM
 from .models import TopographyScan, TopographyResult
 
 logger = logging.getLogger(__name__)
@@ -37,7 +38,22 @@ def process_topography_scan(self, scan_id: int) -> None:
             s.is_selected = (s.id == best_still.id)
             s.save(update_fields=['sharpness_score', 'is_selected'])
 
-        out = analyse_topography_frame(best_image)
+        if scan.camera_focal_px:
+            radii_mm, depths_mm = default_cone_profile()
+            out = analyse_topography_frame(
+                best_image,
+                distance_mm=CONE_NOMINAL_WORKING_DISTANCE_MM,
+                focal_px=scan.camera_focal_px,
+                ring_object_radii_mm=radii_mm,
+                ring_object_depths_mm=depths_mm,
+                calibration_state='default',
+            )
+        else:
+            out = analyse_topography_frame(best_image)
+
+        # Badge the result with what the reconstruction actually did, not the scan's
+        # input state — the label must never claim more than the maths delivered.
+        result_state = out['raw_output']['calibration_state']
         result = TopographyResult(
             scan=scan,
             sim_k_flat=out['sim_k_flat'],
@@ -48,7 +64,7 @@ def process_topography_scan(self, scan_id: int) -> None:
             astigmatism_axis=out['astigmatism_axis'],
             confidence=out['confidence'],
             algorithm_version=out['algorithm_version'],
-            calibration_state=scan.calibration_state,
+            calibration_state=result_state,
             raw_output=out['raw_output'],
         )
         result.ring_overlay.save(f'overlay_{scan_id}.png',
@@ -58,7 +74,8 @@ def process_topography_scan(self, scan_id: int) -> None:
         result.save()
 
         scan.status = 'analysed'
-        scan.save(update_fields=['status', 'updated_at'])
+        scan.calibration_state = result_state
+        scan.save(update_fields=['status', 'calibration_state', 'updated_at'])
         logger.info(f'Scan {scan_id} analysed successfully')
 
     except Exception as exc:
