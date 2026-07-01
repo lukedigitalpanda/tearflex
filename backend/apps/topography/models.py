@@ -21,6 +21,9 @@ class TopographyScan(models.Model):
     device_model = models.CharField(max_length=100, blank=True)
     phone_model_id = models.CharField(max_length=100, blank=True)
     app_version = models.CharField(max_length=20, blank=True)
+    camera_focal_px = models.FloatField(null=True, blank=True)
+    # Horizontal focal length in pixels, matched to the uploaded still's resolution
+    # (mobile-provided). Drives the distance-aware catadioptric reconstruction.
     calibration_state = models.CharField(max_length=20, choices=CALIBRATION_STATE_CHOICES,
                                          default='uncalibrated')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='uploaded')

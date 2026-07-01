@@ -29,7 +29,7 @@ class TopographyScanSerializer(serializers.ModelSerializer):
         model = TopographyScan
         fields = [
             'id', 'assessment', 'video_file', 'device_model', 'phone_model_id',
-            'app_version', 'calibration_state', 'status', 'captured_at', 'stills', 'result',
+            'app_version', 'camera_focal_px', 'calibration_state', 'status', 'captured_at', 'stills', 'result',
         ]
         read_only_fields = ['status', 'calibration_state', 'captured_at']
 
@@ -42,5 +42,10 @@ class TopographyScanCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TopographyScan
-        fields = ['assessment', 'video_file', 'device_model', 'phone_model_id', 'app_version', 'stills']
+        fields = ['assessment', 'video_file', 'device_model', 'phone_model_id', 'app_version', 'camera_focal_px', 'stills']
         extra_kwargs = {'assessment': {'write_only': True}}
+
+    def validate_camera_focal_px(self, value):
+        if value is not None and value <= 0:
+            raise serializers.ValidationError("camera_focal_px must be positive.")
+        return value

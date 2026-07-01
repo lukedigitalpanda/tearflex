@@ -107,3 +107,37 @@ def test_list_scans_invalid_assessment_param(api, clinician):
     resp = api.get('/api/topography/scans/?assessment=notanint')
     assert resp.status_code == 200
     assert resp.data['results'] == []
+
+
+@pytest.mark.django_db
+def test_create_scan_stores_camera_focal_px(api, clinician):
+    assessment = AssessmentFactory(patient__practice=clinician.practice)
+    with patch('apps.topography.views.process_topography_scan.delay') as delay:
+        delay.return_value.id = 'task-focal'
+        resp = api.post('/api/topography/scans/', {
+            'assessment': assessment.id,
+            'camera_focal_px': 2500.0,
+            'stills': [_png('a.png')],
+        }, format='multipart')
+    assert resp.status_code == 201, resp.content
+    scan = TopographyScan.objects.get(id=resp.data['id'])
+    assert scan.camera_focal_px == 2500.0
+
+    detail = api.get(f'/api/topography/scans/{scan.id}/')
+    assert detail.status_code == 200
+    assert detail.data['camera_focal_px'] == 2500.0
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize('bad_value', [0, -5.0])
+def test_create_scan_rejects_non_positive_camera_focal_px(api, clinician, bad_value):
+    assessment = AssessmentFactory(patient__practice=clinician.practice)
+    with patch('apps.topography.views.process_topography_scan.delay') as delay:
+        delay.return_value.id = 'task-should-not-run'
+        resp = api.post('/api/topography/scans/', {
+            'assessment': assessment.id,
+            'camera_focal_px': bad_value,
+            'stills': [_png('a.png')],
+        }, format='multipart')
+    assert resp.status_code == 400
+    assert not TopographyScan.objects.exists()
