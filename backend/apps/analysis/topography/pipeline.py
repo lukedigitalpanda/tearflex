@@ -10,23 +10,28 @@ ALGORITHM_VERSION = 'topo-v0.1'
 
 
 def analyse_topography_frame(bgr: np.ndarray, *, distance_mm=None, focal_px=None,
-                             ring_object_radii_mm=None, object_distance_mm=None,
-                             calibration_state='default') -> dict:
+                             ring_object_radii_mm=None, ring_object_depths_mm=None,
+                             object_distance_mm=None, calibration_state='default') -> dict:
     """Full reconstruction for a single best frame (BGR). DB-free, unit-testable.
 
     Supplying distance_mm + focal_px + ring_object_radii_mm engages the distance-aware
     catadioptric reconstruction (metrically-valid dioptres); otherwise the result stays
     calibration_state='uncalibrated' with the placeholder scale. ring_object_radii_mm is
     the disc's full physical ring radii (innermost-first); the innermost detected subset
-    is used per frame.
+    is used per frame. ring_object_depths_mm (same order) are the rings' axial depths on
+    the Placido cone — each ring's object distance is distance_mm minus its depth, which
+    is what makes the reconstruction cone-aware rather than flat-disc.
     """
     gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
     center = find_reflection_center(gray)
     rings = extract_rings(gray, center)
+    obj_distance = object_distance_mm
+    if ring_object_depths_mm is not None and distance_mm is not None:
+        obj_distance = [distance_mm - z for z in ring_object_depths_mm]
     curvature = reconstruct_curvature(
         rings, distance_mm=distance_mm, focal_px=focal_px,
         ring_object_radii_mm=ring_object_radii_mm,
-        object_distance_mm=object_distance_mm, calibration_state=calibration_state)
+        object_distance_mm=obj_distance, calibration_state=calibration_state)
     metrics = compute_metrics(curvature)
 
     overlay = render_ring_overlay(bgr, rings)

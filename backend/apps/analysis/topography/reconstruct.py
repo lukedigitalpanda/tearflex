@@ -54,6 +54,25 @@ def reconstruct_curvature(rings: dict, scale: float = NOMINAL_DIOPTRE_SCALE, *,
     }
 
 
+def _per_ring_object_distances(object_distance_mm, n_rings):
+    """Broadcast `object_distance_mm` to one value per ring (innermost-first).
+
+    None -> defaults to the working distance inside optics (flat disc). A scalar
+    applies to every ring. A sequence gives per-ring object distances (the cone case:
+    working distance minus each ring's axial depth); its innermost n_rings are used.
+    """
+    if object_distance_mm is None:
+        return [None] * n_rings
+    if isinstance(object_distance_mm, (list, tuple, np.ndarray)):
+        seq = list(object_distance_mm)
+        if len(seq) < n_rings:
+            raise ValueError(
+                f"object_distance_mm has {len(seq)} entries, but {n_rings} rings "
+                f"were detected")
+        return [None if v is None else float(v) for v in seq[:n_rings]]
+    return [float(object_distance_mm)] * n_rings
+
+
 def _reconstruct_catadioptric(rings, distance_mm, focal_px, object_radii_mm,
                               object_distance_mm, calibration_state):
     radii = rings['radii']
@@ -69,6 +88,7 @@ def _reconstruct_catadioptric(rings, distance_mm, focal_px, object_radii_mm,
             f"{n_rings} rings were detected; supply at least one physical radius "
             f"per detectable ring (innermost first)")
     object_radii_mm = object_radii_mm[:n_rings]
+    object_distances = _per_ring_object_distances(object_distance_mm, n_rings)
     if radii.size == 0 or not np.all(radii > 0):
         raise ValueError("degenerate reconstruction: non-positive radii")
 
@@ -78,7 +98,7 @@ def _reconstruct_catadioptric(rings, distance_mm, focal_px, object_radii_mm,
     for i in range(n_angles):
         radius_estimates = [
             optics.corneal_radius_mm(radii[i, k], distance_mm, focal_px,
-                                     object_radii_mm[k], object_distance_mm)
+                                     object_radii_mm[k], object_distances[k])
             for k in range(n_rings)
         ]
         R_mean = float(np.mean(radius_estimates))
