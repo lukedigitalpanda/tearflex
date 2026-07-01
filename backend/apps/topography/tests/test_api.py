@@ -174,3 +174,17 @@ def test_create_scan_rejects_non_positive_capture_dims(api, clinician):
             }, format='multipart')
         assert resp.status_code == 400, resp.content
     assert not TopographyScan.objects.exists()
+
+
+@pytest.mark.django_db
+def test_create_scan_rejects_partial_capture_resolution(api, clinician):
+    assessment = AssessmentFactory(patient__practice=clinician.practice)
+    with patch('apps.topography.views.process_topography_scan.delay') as delay:
+        delay.return_value.id = 'task-should-not-run'
+        resp = api.post('/api/topography/scans/', {
+            'assessment': assessment.id,
+            'capture_width_px': 800,
+            'stills': [_png('a.png')],
+        }, format='multipart')
+    assert resp.status_code == 400, resp.content
+    assert not TopographyScan.objects.exists()

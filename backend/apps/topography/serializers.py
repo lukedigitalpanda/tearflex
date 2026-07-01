@@ -61,3 +61,11 @@ class TopographyScanCreateSerializer(serializers.ModelSerializer):
         if value is not None and value <= 0:
             raise serializers.ValidationError("capture_height_px must be positive.")
         return value
+
+    def validate(self, attrs):
+        w = attrs.get('capture_width_px')
+        h = attrs.get('capture_height_px')
+        if (w is None) != (h is None):
+            raise serializers.ValidationError(
+                "capture_width_px and capture_height_px must be provided together.")
+        return attrs

@@ -43,7 +43,7 @@ def process_topography_scan(self, scan_id: int) -> None:
         focal_px = effective_focal_px(
             scan.camera_focal_px, scan.capture_width_px, scan.capture_height_px,
             still_w, still_h)
-        if focal_px:
+        if focal_px is not None:
             radii_mm, depths_mm = default_cone_profile()
             out = analyse_topography_frame(
                 best_image,

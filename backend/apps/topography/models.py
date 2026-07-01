@@ -22,8 +22,9 @@ class TopographyScan(models.Model):
     phone_model_id = models.CharField(max_length=100, blank=True)
     app_version = models.CharField(max_length=20, blank=True)
     camera_focal_px = models.FloatField(null=True, blank=True)
-    # Horizontal focal length in pixels, matched to the uploaded still's resolution
-    # (mobile-provided). Drives the distance-aware catadioptric reconstruction.
+    # Horizontal focal length in pixels, measured at capture_width_px x capture_height_px
+    # (mobile-provided). The backend rescales it to the analysed still's resolution.
+    # Drives the distance-aware catadioptric reconstruction.
     capture_width_px = models.PositiveIntegerField(null=True, blank=True)
     capture_height_px = models.PositiveIntegerField(null=True, blank=True)
     # Pixel resolution camera_focal_px was measured at (mobile-provided). The backend
