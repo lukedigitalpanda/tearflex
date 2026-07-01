@@ -34,3 +34,8 @@ def test_missing_or_nonpositive_focal_returns_none():
 def test_nonpositive_still_dims_returns_none():
     assert effective_focal_px(1100, 1600, 1600, 0, 800) is None
     assert effective_focal_px(1100, 1600, 1600, 800, -1) is None
+
+
+def test_negative_capture_dims_returns_none():
+    assert effective_focal_px(1100, -800, 600, 800, 600) is None
+    assert effective_focal_px(1100, 800, -600, 800, 600) is None

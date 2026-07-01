@@ -21,7 +21,8 @@ def effective_focal_px(camera_focal_px, capture_width_px, capture_height_px,
     """
     if not camera_focal_px or camera_focal_px <= 0:
         return None
-    if not capture_width_px or not capture_height_px:
+    if not capture_width_px or not capture_height_px \
+            or capture_width_px <= 0 or capture_height_px <= 0:
         return None
     if still_width_px <= 0 or still_height_px <= 0:
         return None
