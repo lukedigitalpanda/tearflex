@@ -141,3 +141,36 @@ def test_create_scan_rejects_non_positive_camera_focal_px(api, clinician, bad_va
         }, format='multipart')
     assert resp.status_code == 400
     assert not TopographyScan.objects.exists()
+
+
+@pytest.mark.django_db
+def test_create_scan_stores_capture_resolution(api, clinician):
+    assessment = AssessmentFactory(patient__practice=clinician.practice)
+    with patch('apps.topography.views.process_topography_scan.delay') as delay:
+        delay.return_value.id = 'task-res'
+        resp = api.post('/api/topography/scans/', {
+            'assessment': assessment.id,
+            'camera_focal_px': 2200.0,
+            'capture_width_px': 1600,
+            'capture_height_px': 1600,
+            'stills': [_png('a.png')],
+        }, format='multipart')
+    assert resp.status_code == 201, resp.content
+    scan = TopographyScan.objects.get(id=resp.data['id'])
+    assert scan.capture_width_px == 1600
+    assert scan.capture_height_px == 1600
+    detail = api.get(f'/api/topography/scans/{scan.id}/')
+    assert detail.data['capture_width_px'] == 1600
+    assert detail.data['capture_height_px'] == 1600
+
+
+@pytest.mark.django_db
+def test_create_scan_rejects_non_positive_capture_dims(api, clinician):
+    assessment = AssessmentFactory(patient__practice=clinician.practice)
+    for bad in ({'capture_width_px': 0}, {'capture_height_px': -10}):
+        with patch('apps.topography.views.process_topography_scan.delay'):
+            resp = api.post('/api/topography/scans/', {
+                'assessment': assessment.id, 'stills': [_png('a.png')], **bad,
+            }, format='multipart')
+        assert resp.status_code == 400, resp.content
+    assert not TopographyScan.objects.exists()
