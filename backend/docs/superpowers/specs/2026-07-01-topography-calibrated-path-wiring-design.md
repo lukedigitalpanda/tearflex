@@ -125,7 +125,10 @@ The badge can then never claim more than the maths delivered.
 - A malformed/degenerate frame in the catadioptric path raises `ValueError`
   (existing guards in `optics.py` / `reconstruct.py`); the task's existing
   `except Exception` marks the scan `failed` and retries — unchanged.
-- `camera_focal_px <= 0` is treated as absent (falsy guard) → uncalibrated path.
+- The create serializer rejects `camera_focal_px <= 0` with HTTP 400, so
+  `tasks.py` only ever sees `None` (→ uncalibrated path) or a positive value
+  (→ calibrated path). The truthy guard (`if scan.camera_focal_px:`) remains
+  in place as defense-in-depth.
 
 ## Testing (backend TDD)
 
