@@ -44,7 +44,11 @@ class TestCapture(models.Model):
     test_type = models.CharField(max_length=20, choices=TEST_TYPE_CHOICES)
     source = models.CharField(
         max_length=10,
-        choices=[('mobile', 'Mobile'), ('manual', 'Manual')],
+        choices=[
+            ('mobile', 'Mobile camera'),
+            ('upload', 'Uploaded file'),
+            ('manual', 'Manual entry (no video)'),
+        ],
         default='mobile',
     )
     video_file = models.FileField(upload_to='captures/%Y/%m/%d/', blank=True, null=True)
@@ -102,3 +106,22 @@ class TestResult(models.Model):
 
     def __str__(self):
         return f'Result for {self.capture}'
+
+
+class CaptureStill(models.Model):
+    """A clinician-selected still frame extracted from a capture's video."""
+    capture = models.ForeignKey(
+        TestCapture, on_delete=models.CASCADE, related_name='stills',
+    )
+    image = models.ImageField(upload_to='stills/%Y/%m/%d/')
+    timestamp_seconds = models.FloatField()
+    label = models.CharField(max_length=50, blank=True)
+    width = models.IntegerField(null=True, blank=True)
+    height = models.IntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['timestamp_seconds']
+
+    def __str__(self):
+        return f'Still @ {self.timestamp_seconds:.2f}s of {self.capture}'

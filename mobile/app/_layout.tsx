@@ -28,8 +28,10 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="patient/[id]" />
           <Stack.Screen name="assessment/select-test" />
+          <Stack.Screen name="assessment/acquire" />
           <Stack.Screen name="assessment/instructions" />
           <Stack.Screen name="assessment/capture" />
+          <Stack.Screen name="assessment/review" />
           <Stack.Screen name="assessment/processing" />
           <Stack.Screen name="assessment/results" />
           <Stack.Screen name="assessment/topography-capture" />

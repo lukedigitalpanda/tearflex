@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Assessment, TestCapture, TestResult
+from .models import Assessment, TestCapture, TestResult, CaptureStill
 
 
 class TestResultSerializer(serializers.ModelSerializer):
@@ -14,24 +14,40 @@ class TestResultSerializer(serializers.ModelSerializer):
         ]
 
 
+class CaptureStillSerializer(serializers.ModelSerializer):
+    timestamp_seconds = serializers.FloatField(min_value=0)
+
+    class Meta:
+        model = CaptureStill
+        fields = ['id', 'capture', 'image', 'timestamp_seconds', 'label', 'width', 'height', 'created_at']
+        read_only_fields = ['id', 'capture', 'created_at']
+
+
 class TestCaptureSerializer(serializers.ModelSerializer):
     result = TestResultSerializer(read_only=True)
+    stills = CaptureStillSerializer(many=True, read_only=True)
 
     class Meta:
         model = TestCapture
         fields = [
             'id', 'assessment', 'test_type', 'source', 'video_file', 'thumbnail',
             'duration_seconds', 'resolution_width', 'resolution_height',
-            'fps', 'device_model', 'status', 'captured_at', 'result',
+            'fps', 'device_model', 'status', 'captured_at', 'result', 'stills',
         ]
         read_only_fields = ['id', 'status', 'captured_at', 'thumbnail', 'source']
 
 
 class TestCaptureUploadSerializer(serializers.ModelSerializer):
-    """Serializer for video upload endpoint."""
+    """Serializer for video upload endpoint (auto-analysis path)."""
+    video_file = serializers.FileField(required=True, allow_null=False)
+    source = serializers.ChoiceField(
+        choices=[('mobile', 'Mobile camera'), ('upload', 'Uploaded file')],
+        required=False, default='mobile',
+    )
+
     class Meta:
         model = TestCapture
-        fields = ['id', 'assessment', 'test_type', 'video_file', 'device_model']
+        fields = ['id', 'assessment', 'test_type', 'video_file', 'device_model', 'source']
 
 
 class AssessmentSerializer(serializers.ModelSerializer):
@@ -51,6 +67,15 @@ class AssessmentSerializer(serializers.ModelSerializer):
 class ManualCaptureSerializer(serializers.Serializer):
     assessment = serializers.PrimaryKeyRelatedField(queryset=Assessment.objects.all())
     test_type = serializers.ChoiceField(choices=TestCapture.TEST_TYPE_CHOICES)
+    video_file = serializers.FileField(required=False, allow_null=True)
+    source = serializers.ChoiceField(
+        choices=[
+            ('mobile', 'Mobile camera'),
+            ('upload', 'Uploaded file'),
+            ('manual', 'Manual entry (no video)'),
+        ],
+        required=False, allow_null=True,
+    )
     nibut_first_breakup_seconds = serializers.FloatField(required=False, allow_null=True)
     nibut_mean_breakup_seconds = serializers.FloatField(required=False, allow_null=True)
     fluorescein_grade = serializers.IntegerField(required=False, allow_null=True)
@@ -64,6 +89,19 @@ class ManualCaptureSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {'nibut_first_breakup_seconds': 'This field is required for NIBUT tests.'}
             )
+        video = data.get('video_file')
+        source = data.get('source')
+        if video is not None:
+            if source not in ('mobile', 'upload'):
+                raise serializers.ValidationError(
+                    {'source': "When a video is attached, source must be 'mobile' or 'upload'."}
+                )
+        else:
+            if source is not None and source != 'manual':
+                raise serializers.ValidationError(
+                    {'source': "Without a video, source must be 'manual' or omitted."}
+                )
+            data['source'] = 'manual'
         return data
 
 

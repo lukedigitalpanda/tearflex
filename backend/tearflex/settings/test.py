@@ -1,15 +1,21 @@
-"""Test settings — uses SQLite so no running Postgres is required."""
+"""Test settings.
+
+Defaults to the project's Postgres (inherited from base) so CI keeps full database
+fidelity — important for a future medical device (JSONField semantics, constraints,
+migrations all exercised against the real engine). Set ``USE_SQLITE_TESTS=1`` to fall
+back to in-memory SQLite for running the suite on a host without a reachable Postgres.
+"""
+import os
+
 from .base import *  # noqa: F401, F403
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': ':memory:',
-    }
-}
-
-# Silence password hashing for speed
+# Faster password hashing for tests.
 PASSWORD_HASHERS = ['django.contrib.auth.hashers.MD5PasswordHasher']
 
-# Media goes to the default FileSystemStorage from base (no S3 outside prod);
-# conftest overrides MEDIA_ROOT to a temp dir for file/image-saving tests.
+if os.environ.get('USE_SQLITE_TESTS') == '1':
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:',
+        }
+    }

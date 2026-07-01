@@ -28,4 +28,22 @@ describe('api', () => {
     await expect(api.get('patients/')).rejects.toMatchObject({ status: 400, detail: 'nope' })
     await expect(api.get('patients/')).rejects.toBeInstanceOf(ApiError)
   })
+
+  it('postMultipart builds FormData, posts to the proxy, and omits content-type', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ id: 7 }), { status: 201, headers: { 'content-type': 'application/json' } })
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const blob = new Blob(['x'], { type: 'video/mp4' })
+    const data = await api.postMultipart<{ id: number }>('assessments/captures/', { assessment: '3', source: 'upload', video_file: blob })
+    expect(data.id).toBe(7)
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe('/api/proxy/assessments/captures')
+    expect(init.method).toBe('POST')
+    expect(init.body).toBeInstanceOf(FormData)
+    expect((init.body as FormData).get('assessment')).toBe('3')
+    expect((init.body as FormData).get('video_file')).toBeInstanceOf(Blob)
+    // No forced content-type (browser sets the multipart boundary)
+    expect(init.headers?.['content-type']).toBeUndefined()
+  })
 })

@@ -32,7 +32,7 @@ export default function SelectTestScreen() {
         eye: selectedEye,
       });
       router.push({
-        pathname: '/assessment/instructions',
+        pathname: '/assessment/acquire',
         params: { assessmentId: String(assessment.id), testType: selectedTest },
       });
     } catch {

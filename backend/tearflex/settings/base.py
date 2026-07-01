@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     'apps.analysis',
     'apps.topography',
     'apps.reports',
+    'apps.calibration',
 ]
 
 MIDDLEWARE = [

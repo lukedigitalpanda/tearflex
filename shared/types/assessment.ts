@@ -5,6 +5,19 @@ export type Eye = 'left' | 'right';
 export type AssessmentStatus = 'capturing' | 'processing' | 'complete' | 'failed';
 export type CaptureStatus = 'uploaded' | 'processing' | 'analysed' | 'failed';
 
+export type CaptureSource = 'mobile' | 'upload' | 'manual';
+
+export interface CaptureStill {
+  id: number;
+  capture: number;
+  image: string;
+  timestamp_seconds: number;
+  label: string;
+  width: number | null;
+  height: number | null;
+  created_at: string;
+}
+
 export interface Assessment {
   id: number;
   patient: number;
@@ -23,12 +36,14 @@ export interface TestCapture {
   id: number;
   assessment: number;
   test_type: TestType;
-  video_file: string;
+  source: CaptureSource;
+  video_file: string | null;
   thumbnail: string;
   duration_seconds: number | null;
   status: CaptureStatus;
   captured_at: string;
   result: TestResult | null;
+  stills: CaptureStill[];
 }
 
 export interface TestResult {

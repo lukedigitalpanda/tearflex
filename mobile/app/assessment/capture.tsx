@@ -88,8 +88,8 @@ export default function CaptureScreen() {
       if (video?.uri) {
         setCaptureState('COMPLETE');
         router.replace({
-          pathname: '/assessment/processing',
-          params: { assessmentId, testType, videoUri: video.uri },
+          pathname: '/assessment/review',
+          params: { assessmentId, testType, videoUri: video.uri, source: 'mobile' },
         });
       }
     } catch {

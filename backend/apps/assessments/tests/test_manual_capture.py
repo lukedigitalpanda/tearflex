@@ -1,7 +1,13 @@
 import pytest
 from rest_framework.test import APIClient
+from unittest.mock import patch
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 from conftest import AssessmentFactory, PatientFactory
+
+
+def _video():
+    return SimpleUploadedFile('capture.mp4', b'fake-bytes', content_type='video/mp4')
 
 
 @pytest.mark.django_db
@@ -103,3 +109,59 @@ def test_manual_capture_unauthenticated():
     }, format='json')
 
     assert resp.status_code == 401
+
+
+@pytest.mark.django_db
+def test_manual_with_video_attaches_and_skips_analysis(api, clinician):
+    from apps.assessments.models import TestCapture, TestResult
+    patient = PatientFactory(practice=clinician.practice)
+    assessment = AssessmentFactory(patient=patient, clinician=clinician)
+    with patch('apps.assessments.views.process_capture.delay') as mock_delay:
+        resp = api.post('/api/assessments/captures/manual/', {
+            'assessment': assessment.id, 'test_type': 'nibut',
+            'nibut_first_breakup_seconds': 7.2,
+            'video_file': _video(), 'source': 'upload',
+        }, format='multipart')
+    assert resp.status_code == 201
+    capture = TestCapture.objects.get(pk=resp.data['id'])
+    assert capture.source == 'upload'
+    assert bool(capture.video_file) is True
+    assert capture.status == 'analysed'
+    mock_delay.assert_not_called()
+    assert TestResult.objects.filter(capture=capture).exists()
+
+
+@pytest.mark.django_db
+def test_manual_with_video_missing_source_is_rejected(api, clinician):
+    patient = PatientFactory(practice=clinician.practice)
+    assessment = AssessmentFactory(patient=patient, clinician=clinician)
+    resp = api.post('/api/assessments/captures/manual/', {
+        'assessment': assessment.id, 'test_type': 'nibut',
+        'nibut_first_breakup_seconds': 7.2, 'video_file': _video(),
+    }, format='multipart')
+    assert resp.status_code == 400
+    assert 'source' in resp.data
+
+
+@pytest.mark.django_db
+def test_manual_source_upload_without_video_is_rejected(api, clinician):
+    patient = PatientFactory(practice=clinician.practice)
+    assessment = AssessmentFactory(patient=patient, clinician=clinician)
+    resp = api.post('/api/assessments/captures/manual/', {
+        'assessment': assessment.id, 'test_type': 'nibut',
+        'nibut_first_breakup_seconds': 7.2, 'source': 'upload',
+    }, format='json')
+    assert resp.status_code == 400
+    assert 'source' in resp.data
+
+
+@pytest.mark.django_db
+def test_manual_with_video_and_source_manual_is_rejected(api, clinician):
+    patient = PatientFactory(practice=clinician.practice)
+    assessment = AssessmentFactory(patient=patient, clinician=clinician)
+    resp = api.post('/api/assessments/captures/manual/', {
+        'assessment': assessment.id, 'test_type': 'nibut',
+        'nibut_first_breakup_seconds': 7.2, 'video_file': _video(), 'source': 'manual',
+    }, format='multipart')
+    assert resp.status_code == 400
+    assert 'source' in resp.data
