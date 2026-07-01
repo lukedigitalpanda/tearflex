@@ -20,6 +20,10 @@ def reconstruct_curvature(rings: dict, scale: float = NOMINAL_DIOPTRE_SCALE, *,
     `ring_object_radii_mm` are all supplied — inverts the convex-mirror image
     formation per ring/meridian (see optics.py) to give metrically-valid dioptres.
     Otherwise falls back to the uncalibrated placeholder scale.
+
+    `ring_object_radii_mm` is the Placido disc's physical ring radii, innermost
+    first — pass the whole set; the ring extractor detects a data-dependent inner
+    subset per frame, and only the innermost `n_rings` radii are used to match it.
     """
     if distance_mm is not None and focal_px is not None and ring_object_radii_mm is not None:
         return _reconstruct_catadioptric(
@@ -54,9 +58,17 @@ def _reconstruct_catadioptric(rings, distance_mm, focal_px, object_radii_mm,
                               object_distance_mm, calibration_state):
     radii = rings['radii']
     n_rings = radii.shape[1]
-    if len(object_radii_mm) != n_rings:
+    # The extractor keeps the innermost n_rings rings that every spoke resolves
+    # (rings.py sorts ascending and truncates), and n_rings shrinks with image
+    # quality. Callers pass the disc's full physical ring radii (innermost-first),
+    # so pair the detected rings with the innermost physical radii. Only too few
+    # radii to explain the detected rings is an error.
+    if len(object_radii_mm) < n_rings:
         raise ValueError(
-            f"ring_object_radii_mm has {len(object_radii_mm)} entries, expected {n_rings}")
+            f"ring_object_radii_mm has {len(object_radii_mm)} entries, but "
+            f"{n_rings} rings were detected; supply at least one physical radius "
+            f"per detectable ring (innermost first)")
+    object_radii_mm = object_radii_mm[:n_rings]
     if radii.size == 0 or not np.all(radii > 0):
         raise ValueError("degenerate reconstruction: non-positive radii")
 

@@ -85,9 +85,23 @@ def test_uncalibrated_path_is_unchanged():
     assert out['scale'] == 4300.0
 
 
-def test_object_radii_length_must_match_rings():
+def test_too_few_object_radii_raises():
     rings = {'angles_deg': np.arange(0, 360, 2.0),
              'radii': np.full((180, 4), 30.0), 'n_rings': 4}
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="detected"):
         reconstruct_curvature(rings, distance_mm=40.0, focal_px=3000.0,
                               ring_object_radii_mm=[3.0, 6.0])  # only 2 for 4 rings
+
+
+def test_catadioptric_uses_innermost_when_more_object_radii_supplied():
+    """The detector keeps the innermost n_rings rings, but the caller supplies the
+    Placido disc's full physical ring radii (innermost-first). Reconstruction must
+    pair the detected rings with the innermost physical radii and still recover the
+    true power — not crash on the count mismatch."""
+    detected_obj = [3.0, 6.0, 9.0, 12.0]                    # 4 rings actually detected
+    full_disc = [3.0, 6.0, 9.0, 12.0, 15.0, 18.0]           # disc has 6 physical rings
+    rings = _rings_for(lambda a: 7.8, detected_obj, 40.0, 3000.0)
+    out = reconstruct_curvature(rings, distance_mm=40.0, focal_px=3000.0,
+                                ring_object_radii_mm=full_disc)
+    assert np.allclose(out['power_per_angle'], 43.2692, atol=1e-3)
+    assert out['central_power'] == pytest.approx(43.2692, abs=1e-3)

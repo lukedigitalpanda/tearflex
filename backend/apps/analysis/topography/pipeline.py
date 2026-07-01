@@ -16,7 +16,9 @@ def analyse_topography_frame(bgr: np.ndarray, *, distance_mm=None, focal_px=None
 
     Supplying distance_mm + focal_px + ring_object_radii_mm engages the distance-aware
     catadioptric reconstruction (metrically-valid dioptres); otherwise the result stays
-    calibration_state='uncalibrated' with the placeholder scale.
+    calibration_state='uncalibrated' with the placeholder scale. ring_object_radii_mm is
+    the disc's full physical ring radii (innermost-first); the innermost detected subset
+    is used per frame.
     """
     gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
     center = find_reflection_center(gray)
