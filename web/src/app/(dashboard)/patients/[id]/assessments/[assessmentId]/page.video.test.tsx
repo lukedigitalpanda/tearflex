@@ -7,6 +7,7 @@ vi.mock('@/hooks/useAssessments', () => ({ useAssessment: () => ({ data: {
 }, isLoading: false }) }))
 vi.mock('@/hooks/usePractice', () => ({ usePractice: () => ({ data: {} }) }))
 vi.mock('@/hooks/useReports', () => ({ useReports: () => ({ data: { results: [] } }), useGenerateReport: () => ({ mutate: vi.fn() }), downloadReportUrl: () => '' }))
+vi.mock('@/hooks/useTopography', () => ({ useTopographyScans: () => ({ data: { results: [] } }) }))
 vi.mock('@/components/player/VideoReviewPlayer', () => ({ VideoReviewPlayer: ({ source }: { source: string }) => <div data-testid="player">{source}</div> }))
 
 import AssessmentDetailPage from './page'

@@ -116,6 +116,40 @@ export const api = {
 
     return res.json() as Promise<T>;
   },
+
+  postTopographyScan: async <T>(
+    fields: Record<string, string>,
+    video: { uri: string; name: string; type: string } | null,
+    stills: { uri: string; name: string; type: string }[],
+  ): Promise<T> => {
+    const { access } = await getTokens();
+    const formData = new FormData();
+    Object.entries(fields).forEach(([key, val]) => formData.append(key, val));
+    if (video) {
+      formData.append('video_file', { uri: video.uri, name: video.name, type: video.type } as unknown as Blob);
+    }
+    // DRF ListField reads repeated form keys; append each still under "stills".
+    stills.forEach((s) => {
+      formData.append('stills', { uri: s.uri, name: s.name, type: s.type } as unknown as Blob);
+    });
+
+    const res = await fetch(`${API_BASE}/topography/scans/`, {
+      method: 'POST',
+      headers: access ? { Authorization: `Bearer ${access}` } : {},
+      body: formData,
+      // Do NOT set Content-Type — fetch sets it automatically with the boundary
+    });
+
+    if (res.status === 401) {
+      await clearTokens();
+      throw new AuthExpiredError('Session expired');
+    }
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as { detail?: string };
+      throw new ApiError(res.status, body.detail ?? `Upload failed (${res.status})`);
+    }
+    return res.json() as Promise<T>;
+  },
 };
 
 export async function loginRequest(username: string, password: string): Promise<void> {

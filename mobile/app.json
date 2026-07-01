@@ -26,6 +26,12 @@
           "cameraPermission": "TearFlex needs camera access to record tear film videos."
         }
       ],
+      [
+        "react-native-vision-camera",
+        {
+          "cameraPermissionText": "TearFlex needs camera access to capture corneal topography scans."
+        }
+      ],
       "expo-router",
       "expo-secure-store",
       "expo-video"

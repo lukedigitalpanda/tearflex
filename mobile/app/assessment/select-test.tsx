@@ -22,7 +22,7 @@ export default function SelectTestScreen() {
   const createAssessment = useCreateAssessment();
 
   const [selectedEye, setSelectedEye] = useState<Eye | null>(null);
-  const [selectedTest, setSelectedTest] = useState<TestType | null>(null);
+  const [selectedTest, setSelectedTest] = useState<TestType | 'topography' | null>(null);
 
   async function handleStart() {
     if (!selectedEye || !selectedTest || !patientId) return;
@@ -98,6 +98,25 @@ export default function SelectTestScreen() {
             <Text className="text-sm text-slate-600">{t.description}</Text>
           </TouchableOpacity>
         ))}
+
+        <TouchableOpacity
+          className={`rounded-xl p-4 mb-3 border-2 ${
+            selectedTest === 'topography'
+              ? 'border-teal-600 bg-teal-50'
+              : 'border-slate-300 bg-white'
+          }`}
+          onPress={() => setSelectedTest('topography')}
+          activeOpacity={0.8}
+        >
+          <Text className={`font-semibold text-base mb-0.5 ${
+            selectedTest === 'topography' ? 'text-teal-700' : 'text-slate-900'
+          }`}>
+            Corneal Topography
+          </Text>
+          <Text className="text-sm text-slate-600">
+            Curvature map & SimK from Placido ring shape · research use
+          </Text>
+        </TouchableOpacity>
 
         {createAssessment.isError && (
           <Text className="text-status-severe text-sm mt-2">

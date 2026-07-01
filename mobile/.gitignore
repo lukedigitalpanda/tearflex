@@ -1,0 +1,4 @@
+# Generated native projects (Expo CNG) — regenerate locally with `npx expo prebuild`.
+# Kept out of the repo so app.json + config plugins remain the source of truth.
+/ios
+/android
