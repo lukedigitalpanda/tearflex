@@ -203,3 +203,4 @@ def test_create_scan_requires_at_least_one_still(api, clinician):
     assert resp.status_code == 400, resp.content
     assert 'stills' in resp.data
     delay.assert_not_called()
+    assert not TopographyScan.objects.exists()
