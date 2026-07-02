@@ -50,3 +50,27 @@ def test_pipeline_uncalibrated_stays_research_badged():
     out = analyse_topography_frame(img)
     assert out['raw_output']['calibration_state'] == 'uncalibrated'
     assert out['raw_output']['distance_mm'] is None
+
+
+def test_pipeline_downgrades_implausible_calibrated_frame():
+    """A wrong-but-internally-consistent focal (2x the truth — exactly the
+    wrong-intrinsics-from-mobile threat) reconstructs to R ~3.6 mm, which is
+    impossible. The pipeline must refuse the calibrated badge and fall back to
+    the uncalibrated placeholder — never raise, never hide the map."""
+    obj = [3.0, 6.0, 9.0, 12.0, 15.0, 18.0]
+    img, _ = make_physical_ring_image(7.8, 40.0, 5000.0, obj)
+    out = analyse_topography_frame(img, distance_mm=40.0, focal_px=10000.0,
+                                   ring_object_radii_mm=obj)
+    assert out['raw_output']['calibration_state'] == 'uncalibrated'
+    assert out['raw_output']['distance_mm'] is None
+    assert 'implausible' in out['raw_output']['downgrade_reason']
+    assert out['central_k'] > 0  # research-use map still produced
+
+
+def test_pipeline_plausible_calibrated_frame_has_no_downgrade_reason():
+    obj = [3.0, 6.0, 9.0, 12.0, 15.0, 18.0]
+    img, _ = make_physical_ring_image(7.8, 40.0, 5000.0, obj)
+    out = analyse_topography_frame(img, distance_mm=40.0, focal_px=5000.0,
+                                   ring_object_radii_mm=obj)
+    assert out['raw_output']['calibration_state'] == 'default'
+    assert 'downgrade_reason' not in out['raw_output']

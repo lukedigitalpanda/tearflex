@@ -149,3 +149,25 @@ def test_process_scan_uncalibrated_without_focal_px():
     scan.refresh_from_db()
     assert scan.result.calibration_state == 'uncalibrated'
     assert scan.calibration_state == 'uncalibrated'
+
+
+@pytest.mark.django_db
+def test_process_scan_downgrades_implausible_calibrated_result():
+    """Wrong-but-plausible intrinsics from mobile (claimed focal 2x the truth)
+    reconstruct to an impossible cornea. The scan must end analysed +
+    downgraded to uncalibrated — NOT failed, NOT retried — with the reason
+    recorded in raw_output. tasks.py is unchanged: the downgrade flows through
+    raw_output['calibration_state'] exactly like a normal result."""
+    scan = TopographyScan.objects.create(
+        assessment=AssessmentFactory(), status='uploaded',
+        camera_focal_px=2200.0, capture_width_px=800, capture_height_px=800)
+    png, _ = _cone_png('cone.png', 1100.0)  # rendered at true focal 1100
+    TopographyStill.objects.create(scan=scan, image=png, index=0)
+
+    process_topography_scan(scan.id)
+
+    scan.refresh_from_db()
+    assert scan.status == 'analysed'
+    assert scan.result.calibration_state == 'uncalibrated'
+    assert scan.calibration_state == 'uncalibrated'
+    assert 'implausible' in scan.result.raw_output['downgrade_reason']
