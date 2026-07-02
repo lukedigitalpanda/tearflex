@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { makeWrapper } from '@/test/queryWrapper'
 
 vi.mock('./UploadAssessmentFlow', () => ({ UploadAssessmentFlow: () => <div data-testid="upload-flow" /> }))
+vi.mock('./TopographyUploadFlow', () => ({ TopographyUploadFlow: () => <div data-testid="topography-flow" /> }))
 
 import { NewAssessmentStepper } from './NewAssessmentStepper'
 
@@ -24,5 +25,13 @@ describe('NewAssessmentStepper entry mode', () => {
     await userEvent.click(screen.getByRole('button', { name: /continue/i }))
     await userEvent.click(screen.getByRole('button', { name: /enter results manually/i }))
     expect(screen.getByText(/first break-up/i)).toBeInTheDocument()
+  })
+
+  it('after eye, choosing Corneal topography shows the topography flow', async () => {
+    render(<NewAssessmentStepper patientId={3} />, { wrapper: makeWrapper() })
+    await userEvent.click(screen.getByRole('button', { name: /right eye/i }))
+    await userEvent.click(screen.getByRole('button', { name: /continue/i }))
+    await userEvent.click(screen.getByRole('button', { name: /corneal topography/i }))
+    expect(screen.getByTestId('topography-flow')).toBeInTheDocument()
   })
 })
