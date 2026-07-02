@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 import pytest
 from apps.analysis.topography.rings import find_reflection_center, extract_rings
-from apps.analysis.topography.reconstruct import reconstruct_curvature
+from apps.analysis.topography.reconstruct import reconstruct_curvature, _robust_radius
 from apps.analysis.topography.tests.synthetic import make_ring_image
 from apps.analysis.topography import optics
 from apps.analysis.topography.disc import default_cone_profile
@@ -143,3 +143,43 @@ def test_catadioptric_uses_innermost_when_more_object_radii_supplied():
                                 ring_object_radii_mm=full_disc)
     assert np.allclose(out['power_per_angle'], 43.2692, atol=1e-3)
     assert out['central_power'] == pytest.approx(43.2692, abs=1e-3)
+
+
+# ---------------------------------------------------------------------------
+# Robust per-ring aggregation (plausibility backstop, task 1)
+# ---------------------------------------------------------------------------
+
+def test_robust_radius_rejects_gross_outlier():
+    """One mis-extracted ring must not drag the meridian estimate."""
+    assert _robust_radius([7.7, 7.8, 7.9, 23.4]) == pytest.approx(7.8)
+
+
+def test_robust_radius_preserves_moderate_spread():
+    """Real spread within a meridian is kept — nothing trimmed, plain mean."""
+    assert _robust_radius([7.5, 7.7, 7.9, 8.1]) == pytest.approx(7.8)
+
+
+def test_robust_radius_two_elements_uses_median():
+    assert _robust_radius([7.0, 9.0]) == pytest.approx(8.0)
+
+
+def test_robust_radius_single_element():
+    assert _robust_radius([7.8]) == pytest.approx(7.8)
+
+
+def test_robust_radius_all_equal_mad_zero():
+    """Zero MAD (all rings agree) must not divide by zero — returns the median."""
+    assert _robust_radius([7.8, 7.8, 7.8, 7.8, 7.8]) == pytest.approx(7.8)
+
+
+def test_single_bad_ring_does_not_bias_meridian_power():
+    """End-to-end through the catadioptric path: one ring mis-extracted 1.5x too
+    large in every meridian (inverts to R ~13 mm vs true 7.8 mm). With plain mean
+    this biased power to ~37 D; robust aggregation must recover ~43.27 D."""
+    obj = [3.0, 6.0, 9.0, 12.0]
+    rings = _rings_for(lambda a: 7.8, obj, 40.0, 3000.0)
+    rings['radii'][:, 2] *= 1.5
+    out = reconstruct_curvature(rings, distance_mm=40.0, focal_px=3000.0,
+                                ring_object_radii_mm=obj)
+    assert np.allclose(out['power_per_angle'], 43.2692, atol=1e-3)
+    assert out['central_power'] == pytest.approx(43.2692, abs=1e-3)  # ring 0 untouched

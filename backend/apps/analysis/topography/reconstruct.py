@@ -7,6 +7,33 @@ KERATOMETRIC_INDEX = optics.KERATOMETRIC_INDEX
 # supplied (calibration_state='uncalibrated'). NOT metrically valid.
 NOMINAL_DIOPTRE_SCALE = 4300.0
 
+# PROVISIONAL outlier cut (unconfirmed as of 2026-07-02): reject per-ring radius
+# estimates further than 3.5 robust standard deviations from the meridian median.
+# Deliberately loose — it rejects a grossly mis-extracted ring, not real spread.
+MAD_REJECT_SIGMA = 3.5
+_MAD_TO_SIGMA = 1.4826  # scaled-MAD consistency constant (normal distribution)
+
+
+def _robust_radius(estimates) -> float:
+    """Aggregate one meridian's per-ring corneal-radius estimates robustly.
+
+    Median for <= 2 rings; otherwise MAD-reject-then-mean, so a single
+    mis-extracted ring cannot silently drag the meridian power. This operates
+    WITHIN a meridian, across its rings — between-meridian variation is real
+    signal (e.g. keratoconus asymmetry) and must never be smoothed here.
+    """
+    values = np.asarray(estimates, dtype=np.float64)
+    if values.size <= 2:
+        return float(np.median(values))
+    med = float(np.median(values))
+    scaled_mad = _MAD_TO_SIGMA * float(np.median(np.abs(values - med)))
+    if scaled_mad == 0.0:
+        return med
+    keep = np.abs(values - med) <= MAD_REJECT_SIGMA * scaled_mad
+    # At least half the values sit within one raw MAD of the median, so `keep`
+    # is never empty.
+    return float(values[keep].mean())
+
 
 def reconstruct_curvature(rings: dict, scale: float = NOMINAL_DIOPTRE_SCALE, *,
                           distance_mm: float | None = None,
@@ -101,8 +128,7 @@ def _reconstruct_catadioptric(rings, distance_mm, focal_px, object_radii_mm,
                                      object_radii_mm[k], object_distances[k])
             for k in range(n_rings)
         ]
-        R_mean = float(np.mean(radius_estimates))
-        power_per_angle[i] = optics.radius_to_power(R_mean)
+        power_per_angle[i] = optics.radius_to_power(_robust_radius(radius_estimates))
         central_powers[i] = optics.radius_to_power(radius_estimates[0])
 
     central_power = float(np.mean(central_powers))
