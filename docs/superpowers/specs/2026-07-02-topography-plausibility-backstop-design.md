@@ -2,7 +2,8 @@
 
 **Date:** 2026-07-02
 **Branch:** `feat/topography-plausibility-backstop` (off master `f2c4f5b`)
-**Status:** Design — awaiting user review before writing the implementation plan.
+**Status:** Approved by user 2026-07-02, with the explicit caveat that **all numeric
+bounds are PROVISIONAL — not yet confirmed** (see "Provisional constants" below).
 
 ## Context
 
@@ -82,9 +83,11 @@ the gate below rather than silently robust-averaged into a different meaning.
 Module constants:
 
 ```
-R_MIN_MM = 4.0     # ~84 D — steeper than any real cornea
-R_MAX_MM = 13.5    # ~25 D — flatter than any real cornea
+R_MIN_MM = 4.0     # PROVISIONAL, ~84 D — steeper than any real cornea
+R_MAX_MM = 13.5    # PROVISIONAL, ~25 D — flatter than any real cornea
 ```
+
+Both values are **provisional** — see "Provisional constants" below.
 
 Power bounds derived once via `optics.radius_to_power` so they stay keratometric-index
 consistent:
@@ -131,13 +134,35 @@ and the scan. Because the fallback happens inside the pipeline, no exception rea
 `except Exception → self.retry` path — so an implausible reconstruction does **not** burn
 Celery retries and the scan ends `status='analysed'`, not `failed`.
 
+### Provisional constants — NOT confirmed yet (user caveat, 2026-07-02)
+
+Every numeric threshold in this design is a provisional engineering default, **not** a
+confirmed value:
+
+- `R_MIN_MM = 4.0` / `R_MAX_MM = 13.5` (and the power bounds derived from them)
+- the `3.5 × scaled-MAD` outlier-rejection multiplier
+
+They await confirmation against clinical references and, ultimately, real capture data.
+Consequences for the implementation:
+
+- Define each as a module-level constant (single point of change) with a `PROVISIONAL`
+  marker in the comment at the definition site, so they are greppable and trivially
+  revisable.
+- Tests must survive a bound revision: "impossible" tests use values far outside any
+  plausible revision (e.g. R ≈ 3 mm / ≈ 15 mm), not values hugging the current bounds.
+- The safety-critical "must pass" tests pin **physiological facts**, not the constants:
+  severe keratoconus (~R 4.8–5 mm) and normal (~R 7.8 mm) must always pass the gate. If a
+  future bound revision breaks these tests, the revision is wrong — not the tests.
+
 ## Test plan (TDD, backend, `USE_SQLITE_TESTS=1`)
 
 `test_reconstruct.py`:
 - `_robust_radius`: gross single outlier rejected (result ≈ clean subset); moderate real
   spread preserved (not over-trimmed); ≤2-element median fallback; all-equal / MAD==0
   path.
-- Gate raises `ImplausibleReconstruction` when rings reconstruct to R < 4mm (and > 13.5mm).
+- Gate raises `ImplausibleReconstruction` for reconstructions far outside the provisional
+  bounds (e.g. R ≈ 3 mm and R ≈ 15 mm — chosen well clear of the bounds so the tests
+  survive a bound revision).
 - **Gate passes steep-but-real keratoconus (~R5mm / ~67D)** — the safety-critical test:
   assert no raise and `calibration_state == 'default'`.
 - Gate passes a normal cornea (~R7.8mm / ~43D).
