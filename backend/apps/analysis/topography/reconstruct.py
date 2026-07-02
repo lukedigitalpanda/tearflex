@@ -35,6 +35,38 @@ def _robust_radius(estimates) -> float:
     return float(values[keep].mean())
 
 
+class ImplausibleReconstruction(ValueError):
+    """The reconstruction produced a physically-impossible cornea.
+
+    This means measurement failure (bad extraction, wrong intrinsics) — the
+    caller should refuse the calibrated badge, not publish the number.
+    """
+
+
+# PROVISIONAL physiological measurement-sanity bounds (unconfirmed as of
+# 2026-07-02). Generous by design: they reject impossible corneas only, never
+# abnormal-but-real ones — severe keratoconus (~R 4.8-5 mm, ~70 D) must always
+# pass. NOT clinical/normality thresholds; revise here when confirmed.
+R_MIN_MM = 4.0    # PROVISIONAL: ~84.4 D, steeper than any real cornea
+R_MAX_MM = 13.7   # PROVISIONAL: ~24.6 D, flatter than any real cornea
+_POWER_MAX = optics.radius_to_power(R_MIN_MM)  # bounds derived via the same
+_POWER_MIN = optics.radius_to_power(R_MAX_MM)  # keratometric index as results
+
+
+def _gate_plausibility(power_per_angle: np.ndarray, central_power: float) -> None:
+    """Raise ImplausibleReconstruction if any meridian power (or the central
+    power) is outside the physically-possible range. Runs on the robustly
+    aggregated powers only — a single outlier RING is handled (rejected) by
+    _robust_radius; a whole impossible MERIDIAN is a measurement failure."""
+    values = np.append(power_per_angle, central_power)
+    out_of_bounds = values[(values < _POWER_MIN) | (values > _POWER_MAX)]
+    if out_of_bounds.size:
+        raise ImplausibleReconstruction(
+            f"implausible reconstruction: power {out_of_bounds[0]:.1f} D outside "
+            f"[{_POWER_MIN:.1f}, {_POWER_MAX:.1f}] D (corneal radius outside "
+            f"[{R_MIN_MM}, {R_MAX_MM}] mm) — refusing calibrated badge")
+
+
 def reconstruct_curvature(rings: dict, scale: float = NOMINAL_DIOPTRE_SCALE, *,
                           distance_mm: float | None = None,
                           focal_px: float | None = None,
@@ -134,6 +166,7 @@ def _reconstruct_catadioptric(rings, distance_mm, focal_px, object_radii_mm,
     central_power = float(np.mean(central_powers))
     if not np.all(np.isfinite(power_per_angle)) or not np.isfinite(central_power):
         raise ValueError("degenerate reconstruction: non-finite curvature")
+    _gate_plausibility(power_per_angle, central_power)
     return {
         'angles_deg': rings['angles_deg'],
         'mean_radius_per_angle': radii.mean(axis=1),

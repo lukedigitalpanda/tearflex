@@ -2,7 +2,8 @@ import numpy as np
 import cv2
 import pytest
 from apps.analysis.topography.rings import find_reflection_center, extract_rings
-from apps.analysis.topography.reconstruct import reconstruct_curvature, _robust_radius
+from apps.analysis.topography.reconstruct import (
+    reconstruct_curvature, _robust_radius, ImplausibleReconstruction)
 from apps.analysis.topography.tests.synthetic import make_ring_image
 from apps.analysis.topography import optics
 from apps.analysis.topography.disc import default_cone_profile
@@ -183,3 +184,69 @@ def test_single_bad_ring_does_not_bias_meridian_power():
                                 ring_object_radii_mm=obj)
     assert np.allclose(out['power_per_angle'], 43.2692, atol=1e-3)
     assert out['central_power'] == pytest.approx(43.2692, abs=1e-3)  # ring 0 untouched
+
+
+# ---------------------------------------------------------------------------
+# Physiological sanity gate (plausibility backstop, task 2)
+# ---------------------------------------------------------------------------
+# Impossible-cornea tests use R = 3 mm / 15 mm — far outside the PROVISIONAL
+# bounds so they survive a bound revision. Must-pass tests pin physiological
+# facts (severe keratoconus R = 5 mm, normal R = 7.8 mm): if a future bound
+# revision breaks them, the revision is wrong, not the tests.
+
+def test_gate_rejects_impossibly_steep_cornea():
+    """R = 3 mm (112.5 D) is not a cornea — measurement failure, must raise."""
+    obj = [3.0, 6.0, 9.0, 12.0]
+    rings = _rings_for(lambda a: 3.0, obj, 40.0, 3000.0)
+    with pytest.raises(ImplausibleReconstruction, match="implausible"):
+        reconstruct_curvature(rings, distance_mm=40.0, focal_px=3000.0,
+                              ring_object_radii_mm=obj)
+
+
+def test_gate_rejects_impossibly_flat_cornea():
+    """R = 15 mm (22.5 D) is not a cornea — must raise."""
+    obj = [3.0, 6.0, 9.0, 12.0]
+    rings = _rings_for(lambda a: 15.0, obj, 40.0, 3000.0)
+    with pytest.raises(ImplausibleReconstruction, match="implausible"):
+        reconstruct_curvature(rings, distance_mm=40.0, focal_px=3000.0,
+                              ring_object_radii_mm=obj)
+
+
+def test_gate_passes_severe_keratoconus():
+    """SAFETY-CRITICAL: steep-but-real pathology (R = 5 mm, 67.5 D — severe
+    keratoconus) must NEVER be suppressed by the gate."""
+    obj = [3.0, 6.0, 9.0, 12.0]
+    rings = _rings_for(lambda a: 5.0, obj, 40.0, 3000.0)
+    out = reconstruct_curvature(rings, distance_mm=40.0, focal_px=3000.0,
+                                ring_object_radii_mm=obj)
+    assert out['calibration_state'] == 'default'
+    assert np.allclose(out['power_per_angle'], 67.5, atol=1e-3)
+
+
+def test_gate_passes_normal_cornea():
+    obj = [3.0, 6.0, 9.0, 12.0]
+    rings = _rings_for(lambda a: 7.8, obj, 40.0, 3000.0)
+    out = reconstruct_curvature(rings, distance_mm=40.0, focal_px=3000.0,
+                                ring_object_radii_mm=obj)
+    assert out['calibration_state'] == 'default'
+
+
+def test_gate_trips_on_single_impossible_meridian():
+    """One impossible meridian among normal ones is an extraction failure (the
+    generous bounds mean it cannot be real pathology) — the whole reconstruction
+    is refused, not published with one bad meridian. Note the aggregate central
+    power (~43.7 D) stays in bounds, so this exercises per-meridian gating."""
+    obj = [3.0, 6.0, 9.0, 12.0]
+    rings = _rings_for(lambda a: 3.0 if a == 90.0 else 7.8, obj, 40.0, 3000.0)
+    with pytest.raises(ImplausibleReconstruction, match="implausible"):
+        reconstruct_curvature(rings, distance_mm=40.0, focal_px=3000.0,
+                              ring_object_radii_mm=obj)
+
+
+def test_uncalibrated_path_is_not_gated():
+    """The placeholder scale is not metrically valid, so its 'powers' (here
+    4300/30 ~ 143) must not trip the physiological gate."""
+    rings = {'angles_deg': np.arange(0, 360, 2.0),
+             'radii': np.full((180, 4), 30.0), 'n_rings': 4}
+    out = reconstruct_curvature(rings)
+    assert out['calibration_state'] == 'uncalibrated'
