@@ -7,6 +7,8 @@ image diagonal. Correct under uniform downscaling with EXIF intact; wrong
 under crop (accepted residual risk, bounded by the plausibility backstop).
 The tag is an integer, so OEM rounding sets a ~1-2% accuracy floor.
 """
+import warnings
+
 from PIL import ExifTags, Image
 
 # Full-frame 35mm film diagonal, sqrt(36^2 + 24^2) mm. PROVISIONAL convention
@@ -22,18 +24,25 @@ def focal_35mm_from_file(path) -> float | None:
     Checks the Exif sub-IFD first (the tag's standard placement), then the
     top-level IFD (lenient — some writers misplace it). Returns None for
     unreadable files, missing tags, or non-positive values. Never raises.
+    Corrupt or oddly-encoded EXIF is an expected, silent case — Pillow's
+    parser warnings are suppressed.
     """
     try:
-        with Image.open(path) as img:
-            exif = img.getexif()
+        with warnings.catch_warnings():
+            # Pillow warns while parsing corrupt EXIF; absent/broken metadata
+            # is an expected, silent case here (and never-raises must hold
+            # even under an escalated warnings filter).
+            warnings.simplefilter('ignore')
+            with Image.open(path) as img:
+                exif = img.getexif()
+            value = exif.get_ifd(ExifTags.IFD.Exif).get(ExifTags.Base.FocalLengthIn35mmFilm)
+            if value is None:
+                value = exif.get(ExifTags.Base.FocalLengthIn35mmFilm)
     except Exception:
         return None
-    value = exif.get_ifd(ExifTags.IFD.Exif).get(ExifTags.Base.FocalLengthIn35mmFilm)
-    if value is None:
-        value = exif.get(ExifTags.Base.FocalLengthIn35mmFilm)
     try:
         value = float(value)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, ZeroDivisionError):
         return None
     return value if value > 0 else None
 

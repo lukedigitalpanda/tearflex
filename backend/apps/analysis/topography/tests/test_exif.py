@@ -1,5 +1,5 @@
 import pytest
-from PIL import ExifTags, Image
+from PIL import ExifTags, Image, TiffImagePlugin
 from apps.analysis.topography.exif import (
     focal_35mm_from_file, focal_px_from_35mm, FULL_FRAME_DIAGONAL_MM)
 
@@ -67,4 +67,13 @@ def test_focal_35mm_from_file_zero_tag_returns_none(tmp_path):
     exif = Image.Exif()
     exif[0x8769] = {F35_TAG: 0}
     path = _jpeg(tmp_path, 'zero.jpg', exif)
+    assert focal_35mm_from_file(path) is None
+
+
+def test_focal_35mm_from_file_zero_denominator_rational_returns_none(tmp_path):
+    """Some EXIF writers encode 'not available' as a rational with denominator
+    0; float() on that raises ZeroDivisionError — must yield None, not crash."""
+    exif = Image.Exif()
+    exif[0x8769] = {F35_TAG: TiffImagePlugin.IFDRational(26, 0)}
+    path = _jpeg(tmp_path, 'zeroden.jpg', exif)
     assert focal_35mm_from_file(path) is None
