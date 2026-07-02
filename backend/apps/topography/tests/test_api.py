@@ -188,3 +188,19 @@ def test_create_scan_rejects_partial_capture_resolution(api, clinician):
         }, format='multipart')
     assert resp.status_code == 400, resp.content
     assert not TopographyScan.objects.exists()
+
+
+@pytest.mark.django_db
+def test_create_scan_requires_at_least_one_still(api, clinician):
+    """A zero-still scan can never analyse (the task needs an image) — reject at
+    the API instead of creating a scan that burns deterministic Celery retries."""
+    assessment = AssessmentFactory(patient__practice=clinician.practice)
+    with patch('apps.topography.views.process_topography_scan.delay') as delay:
+        delay.return_value.id = 'task-should-not-run'
+        resp = api.post('/api/topography/scans/', {
+            'assessment': assessment.id,
+        }, format='multipart')
+    assert resp.status_code == 400, resp.content
+    assert 'stills' in resp.data
+    delay.assert_not_called()
+    assert not TopographyScan.objects.exists()

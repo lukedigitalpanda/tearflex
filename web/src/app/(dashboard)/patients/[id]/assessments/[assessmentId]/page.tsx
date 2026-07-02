@@ -29,6 +29,7 @@ export default function AssessmentDetailPage({ params }: { params: { assessmentI
   // This assessment's report (any status). Reports auto-generate on completion,
   // so normally one exists; older/failed ones can still be generated manually.
   const report = (reportsData?.results ?? []).find((r) => r.assessment === assessment.id)
+  const topographyScans = topographyData?.results ?? []
 
   return (
     <div className="space-y-6">
@@ -57,7 +58,7 @@ export default function AssessmentDetailPage({ params }: { params: { assessmentI
         </div>
       </div>
 
-      {assessment.captures.length === 0
+      {assessment.captures.length === 0 && topographyScans.length === 0
         ? <EmptyState title="No captures in this assessment" />
         : assessment.captures.map((c: TestCapture) => (
             <div key={c.id} className="space-y-2">
@@ -77,7 +78,7 @@ export default function AssessmentDetailPage({ params }: { params: { assessmentI
             </div>
           ))}
 
-      {(topographyData?.results ?? []).map((scan: TopographyScan) => (
+      {topographyScans.map((scan: TopographyScan) => (
         <div key={`topo-${scan.id}`} className="space-y-2">
           <h2 className="text-sm font-semibold text-muted-foreground">CORNEAL TOPOGRAPHY</h2>
           {scan.result

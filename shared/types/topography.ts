@@ -32,6 +32,9 @@ export interface TopographyScan {
   device_model: string;
   phone_model_id: string;
   app_version: string;
+  camera_focal_px: number | null;
+  capture_width_px: number | null;
+  capture_height_px: number | null;
   calibration_state: CalibrationState;
   status: TopographyScanStatus;
   captured_at: string;

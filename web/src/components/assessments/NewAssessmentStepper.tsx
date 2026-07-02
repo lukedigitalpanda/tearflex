@@ -6,6 +6,7 @@ import { StepFluorescein } from './steps/StepFluorescein'
 import { StepLipid } from './steps/StepLipid'
 import { StepReview } from './steps/StepReview'
 import { UploadAssessmentFlow } from './UploadAssessmentFlow'
+import { TopographyUploadFlow } from './TopographyUploadFlow'
 import type { EyeStepData, NibutStepData, FluoresceinStepData, LipidStepData } from '@/lib/schemas'
 
 const STEP_LABELS = ['Eye', 'NIBUT', 'Fluorescein', 'Lipid', 'Review'] as const
@@ -20,7 +21,7 @@ interface StepData {
 export function NewAssessmentStepper({ patientId }: { patientId: number }) {
   const [step, setStep] = useState(0)
   const [data, setData] = useState<StepData>({ eye: null, nibut: null, fluorescein: null, lipid: null })
-  const [mode, setMode] = useState<'choose' | 'manual' | 'upload'>('choose')
+  const [mode, setMode] = useState<'choose' | 'manual' | 'upload' | 'topography'>('choose')
 
   return (
     <div className="mx-auto max-w-lg space-y-8">
@@ -64,6 +65,10 @@ export function NewAssessmentStepper({ patientId }: { patientId: number }) {
               className="flex-1 rounded-lg border-2 border-border px-4 py-6 text-sm font-semibold hover:border-teal-300">
               Enter results manually
             </button>
+            <button type="button" onClick={() => setMode('topography')}
+              className="flex-1 rounded-lg border-2 border-border px-4 py-6 text-sm font-semibold hover:border-teal-300">
+              Corneal topography (upload images)
+            </button>
           </div>
           <button type="button" onClick={() => setStep(0)} className="text-xs text-muted-foreground underline">Back</button>
         </div>
@@ -71,6 +76,10 @@ export function NewAssessmentStepper({ patientId }: { patientId: number }) {
 
       {step === 1 && mode === 'upload' && data.eye && (
         <UploadAssessmentFlow patientId={patientId} eye={data.eye.eye} />
+      )}
+
+      {step === 1 && mode === 'topography' && data.eye && (
+        <TopographyUploadFlow patientId={patientId} eye={data.eye.eye} />
       )}
 
       {step === 1 && mode === 'manual' && (

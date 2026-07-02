@@ -41,9 +41,12 @@ export const api = {
   patch: <T>(path: string, data?: unknown) =>
     request<T>(path, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data ?? {}) }),
   del: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
-  postMultipart: <T>(path: string, fields: Record<string, string | Blob>) => {
+  postMultipart: <T>(path: string, fields: Record<string, string | Blob | Blob[]>) => {
     const form = new FormData()
-    for (const [key, value] of Object.entries(fields)) form.append(key, value)
+    for (const [key, value] of Object.entries(fields)) {
+      if (Array.isArray(value)) for (const item of value) form.append(key, item)
+      else form.append(key, value)
+    }
     return request<T>(path, { method: 'POST', body: form })
   },
 }
