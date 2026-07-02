@@ -1,0 +1,48 @@
+"""EXIF-derived camera focal length for topography stills.
+
+When a scan carries no mobile-declared intrinsic, the analysed still's own
+EXIF FocalLengthIn35mmFilm tag gives a screening-grade pixel focal length:
+35mm equivalence encodes field of view, so the pixel focal follows from the
+image diagonal. Correct under uniform downscaling with EXIF intact; wrong
+under crop (accepted residual risk, bounded by the plausibility backstop).
+The tag is an integer, so OEM rounding sets a ~1-2% accuracy floor.
+"""
+from PIL import ExifTags, Image
+
+# Full-frame 35mm film diagonal, sqrt(36^2 + 24^2) mm. PROVISIONAL convention
+# choice (CIPA diagonal equivalence, what OEMs write; also orientation-
+# invariant): a writer using horizontal-36mm equivalence would differ ~4% on
+# 4:3 — validate against real captures before trusting absolute dioptres.
+FULL_FRAME_DIAGONAL_MM = 43.2666
+
+
+def focal_35mm_from_file(path) -> float | None:
+    """Read FocalLengthIn35mmFilm from an image file, or None.
+
+    Checks the Exif sub-IFD first (the tag's standard placement), then the
+    top-level IFD (lenient — some writers misplace it). Returns None for
+    unreadable files, missing tags, or non-positive values. Never raises.
+    """
+    try:
+        with Image.open(path) as img:
+            exif = img.getexif()
+    except Exception:
+        return None
+    value = exif.get_ifd(ExifTags.IFD.Exif).get(ExifTags.Base.FocalLengthIn35mmFilm)
+    if value is None:
+        value = exif.get(ExifTags.Base.FocalLengthIn35mmFilm)
+    try:
+        value = float(value)
+    except (TypeError, ValueError):
+        return None
+    return value if value > 0 else None
+
+
+def focal_px_from_35mm(f35, width_px, height_px) -> float | None:
+    """Pixel focal length from a 35mm-equivalent focal at the given dims."""
+    if f35 is None or width_px is None or height_px is None:
+        return None
+    if f35 <= 0 or width_px <= 0 or height_px <= 0:
+        return None
+    diagonal_px = (width_px ** 2 + height_px ** 2) ** 0.5
+    return diagonal_px * float(f35) / FULL_FRAME_DIAGONAL_MM
