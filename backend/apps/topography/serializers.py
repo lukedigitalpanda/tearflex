@@ -36,8 +36,11 @@ class TopographyScanSerializer(serializers.ModelSerializer):
 
 
 class TopographyScanCreateSerializer(serializers.ModelSerializer):
+    # Required with at least one image: the analysis task selects the sharpest
+    # still, so a scan without any can only ever fail (previously it burned
+    # deterministic Celery retries before doing so).
     stills = serializers.ListField(
-        child=serializers.ImageField(), write_only=True, required=False, default=list,
+        child=serializers.ImageField(), write_only=True, min_length=1,
         max_length=MAX_STILLS_PER_SCAN,
     )
 
