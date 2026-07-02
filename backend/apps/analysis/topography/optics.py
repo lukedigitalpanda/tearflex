@@ -24,7 +24,8 @@ class ImplausibleReconstruction(ValueError):
     the caller should refuse the calibrated badge (downgrade), never publish
     the number or fail the scan. Raised here when individually-valid inputs
     are mutually non-physical, and by the reconstruction-level plausibility
-    gate (see reconstruct._gate_plausibility, which re-exports this class).
+    gate (reconstruct._gate_plausibility; the reconstruct module re-exports
+    this class).
     """
 
 

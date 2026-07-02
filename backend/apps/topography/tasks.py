@@ -51,7 +51,8 @@ def process_topography_scan(self, scan_id: int) -> None:
             # still's own EXIF (precedence: declared > EXIF > none). The
             # derived focal is expressed at the still's own dims, so no
             # rescale reconciliation is needed.
-            # A positively-detected crop (aspect mismatch) invalidates the still's f35, so the EXIF fallback is skipped.
+            # A positively-detected crop (aspect mismatch) invalidates the
+            # still's f35, so the EXIF fallback is skipped.
             f35 = focal_35mm_from_file(best_still.image.path)
             focal_px = focal_px_from_35mm(f35, still_w, still_h)
             focal_source = 'exif' if focal_px is not None else None
