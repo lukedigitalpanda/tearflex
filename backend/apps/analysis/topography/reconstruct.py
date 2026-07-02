@@ -48,7 +48,7 @@ class ImplausibleReconstruction(ValueError):
 # abnormal-but-real ones — severe keratoconus (~R 4.8-5 mm, ~70 D) must always
 # pass. NOT clinical/normality thresholds; revise here when confirmed.
 R_MIN_MM = 4.0    # PROVISIONAL: ~84.4 D, steeper than any real cornea
-R_MAX_MM = 13.7   # PROVISIONAL: ~24.6 D, flatter than any real cornea
+R_MAX_MM = 13.5   # PROVISIONAL: ~25.0 D, flatter than any real cornea
 _POWER_MAX = optics.radius_to_power(R_MIN_MM)  # bounds derived via the same
 _POWER_MIN = optics.radius_to_power(R_MAX_MM)  # keratometric index as results
 
