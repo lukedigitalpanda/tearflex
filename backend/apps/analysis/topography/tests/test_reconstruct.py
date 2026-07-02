@@ -121,17 +121,22 @@ def test_catadioptric_cone_recovers_spherical_power():
     assert out['central_power'] == pytest.approx(optics.radius_to_power(7.8), abs=1e-3)
 
 
-def test_flat_object_distance_rejected_for_cone_geometry():
-    """Ignoring cone depth (single flat object distance) distorts the per-ring
-    radius estimates so badly (outer rings invert to R ~24 mm, non-physical)
-    that the plausibility gate rejects the whole reconstruction — this is why
-    per-ring object distances are needed."""
+def test_flat_object_distance_biases_cone_reconstruction():
+    """Ignoring cone depth (a single flat object distance) materially biases the
+    inversion — this is why per-ring object distances are needed. Pinned at the
+    optics level, gate-independently: the full flat reconstruction of these
+    rings currently also trips the plausibility gate, but only ~1% past a
+    PROVISIONAL bound, so this test asserts the stable physics (ring-0 /
+    central-power bias > 1 D) rather than that boundary-adjacent behaviour."""
     radii_mm, depths_mm = default_cone_profile()
     d, f = 45.0, 2500.0
-    rings = _cone_rings_for(lambda a: 7.8, radii_mm, depths_mm, d, f)
-    with pytest.raises(ImplausibleReconstruction, match="implausible"):
-        reconstruct_curvature(rings, distance_mm=d, focal_px=f,
-                              ring_object_radii_mm=radii_mm)  # object_distance defaults to d
+    # Render ring 0 at its true cone depth, then invert it assuming a flat disc
+    # (object distance defaulting to the working distance).
+    ring0_px = optics.ring_radius_px(7.8, d, f, radii_mm[0],
+                                     object_distance_mm=d - depths_mm[0])
+    central_flat = optics.radius_to_power(
+        optics.corneal_radius_mm(ring0_px, d, f, radii_mm[0]))
+    assert abs(central_flat - optics.radius_to_power(7.8)) > 1.0
 
 
 def test_catadioptric_uses_innermost_when_more_object_radii_supplied():
