@@ -97,7 +97,8 @@ def process_topography_scan(self, scan_id: int) -> None:
         scan.status = 'analysed'
         scan.calibration_state = result_state
         scan.save(update_fields=['status', 'calibration_state', 'updated_at'])
-        logger.info(f'Scan {scan_id} analysed successfully')
+        logger.info(f'Scan {scan_id} analysed successfully '
+                    f'(calibration={result_state}, focal_source={focal_source})')
 
     except Exception as exc:
         logger.error(f'Scan {scan_id} analysis failed: {exc}')

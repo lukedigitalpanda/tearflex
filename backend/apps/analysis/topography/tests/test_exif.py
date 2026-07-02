@@ -1,7 +1,6 @@
 import pytest
 from PIL import ExifTags, Image, TiffImagePlugin
-from apps.analysis.topography.exif import (
-    focal_35mm_from_file, focal_px_from_35mm, FULL_FRAME_DIAGONAL_MM)
+from apps.analysis.topography.exif import focal_35mm_from_file, focal_px_from_35mm
 
 F35_TAG = int(ExifTags.Base.FocalLengthIn35mmFilm)  # 41989
 
@@ -77,3 +76,22 @@ def test_focal_35mm_from_file_zero_denominator_rational_returns_none(tmp_path):
     exif[0x8769] = {F35_TAG: TiffImagePlugin.IFDRational(26, 0)}
     path = _jpeg(tmp_path, 'zeroden.jpg', exif)
     assert focal_35mm_from_file(path) is None
+
+
+def test_focal_35mm_from_file_string_inf_returns_none(tmp_path):
+    """A crafted file can encode the tag as ASCII 'inf' -> float('inf') is
+    positive but unusable; it previously escaped into the optics layer."""
+    exif = Image.Exif()
+    exif[0x8769] = {F35_TAG: 'inf'}
+    path = _jpeg(tmp_path, 'inf.jpg', exif)
+    assert focal_35mm_from_file(path) is None
+
+
+def test_focal_35mm_from_file_out_of_band_returns_none(tmp_path):
+    """Values no phone lens can produce are metadata noise, not measurements
+    (band is PROVISIONAL; test values sit far outside any plausible revision)."""
+    for f35 in (2, 5000):
+        exif = Image.Exif()
+        exif[0x8769] = {F35_TAG: f35}
+        path = _jpeg(tmp_path, f'band_{f35}.jpg', exif)
+        assert focal_35mm_from_file(path) is None

@@ -7,6 +7,7 @@ image diagonal. Correct under uniform downscaling with EXIF intact; wrong
 under crop (accepted residual risk, bounded by the plausibility backstop).
 The tag is an integer, so OEM rounding sets a ~1-2% accuracy floor.
 """
+import math
 import warnings
 
 from PIL import ExifTags, Image
@@ -17,15 +18,22 @@ from PIL import ExifTags, Image
 # 4:3 — validate against real captures before trusting absolute dioptres.
 FULL_FRAME_DIAGONAL_MM = 43.2666
 
+# PROVISIONAL usability band for the 35mm-equivalent tag (unconfirmed): phone
+# cameras span roughly 13mm (ultra-wide) to ~130mm (tele) equivalents, so
+# values outside this generous band are treated as unusable metadata, not
+# measurements. Revise here when confirmed against real captures.
+F35_MIN_MM = 10.0
+F35_MAX_MM = 200.0
+
 
 def focal_35mm_from_file(path) -> float | None:
     """Read FocalLengthIn35mmFilm from an image file, or None.
 
     Checks the Exif sub-IFD first (the tag's standard placement), then the
     top-level IFD (lenient — some writers misplace it). Returns None for
-    unreadable files, missing tags, or non-positive values. Never raises.
-    Corrupt or oddly-encoded EXIF is an expected, silent case — Pillow's
-    parser warnings are suppressed.
+    unreadable files, missing tags, non-finite values, or values outside the
+    PROVISIONAL usability band. Never raises. Corrupt or oddly-encoded EXIF
+    is an expected, silent case — Pillow's parser warnings are suppressed.
     """
     try:
         with warnings.catch_warnings():
@@ -44,7 +52,9 @@ def focal_35mm_from_file(path) -> float | None:
         value = float(value)
     except (TypeError, ValueError, ZeroDivisionError):
         return None
-    return value if value > 0 else None
+    if not math.isfinite(value):
+        return None
+    return value if F35_MIN_MM <= value <= F35_MAX_MM else None
 
 
 def focal_px_from_35mm(f35, width_px, height_px) -> float | None:

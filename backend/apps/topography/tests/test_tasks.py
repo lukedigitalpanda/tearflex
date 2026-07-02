@@ -174,6 +174,7 @@ def test_process_scan_downgrades_implausible_calibrated_result():
     assert scan.result.calibration_state == 'uncalibrated'
     assert scan.calibration_state == 'uncalibrated'
     assert 'implausible' in scan.result.raw_output['downgrade_reason']
+    assert scan.result.raw_output['focal_source'] == 'declared'
 
 
 def _cone_jpg(name, focal_px, f35=None):

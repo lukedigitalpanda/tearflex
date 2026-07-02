@@ -29,7 +29,8 @@ every future upload path (web 2b, mobile-library 2c) calibrated-capable on day o
    Chosen over the horizontal-36mm variant because CIPA DCG-001 diagonal equivalence is
    what OEMs write, and the diagonal form is **orientation-invariant** (√(w²+h²) is the
    same whether the stored image is rotated), sidestepping EXIF-orientation issues
-   (cv2.imread ignores orientation; PIL raw dims match cv2 dims). CONVENTION RISK: a
+   (the diagonal is invariant under the 90° rotations EXIF orientation can introduce,
+   regardless of whether the decoder applies them). CONVENTION RISK: a
    writer using horizontal equivalence differs by ~4% on 4:3 — flagged PROVISIONAL,
    validate against real captures. Accuracy floor either way: the tag is an integer
    (EXIF SHORT), so OEM rounding gives ~1–2% ≈ ~1–2 D — screening-grade, consistent
