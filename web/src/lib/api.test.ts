@@ -46,4 +46,18 @@ describe('api', () => {
     // No forced content-type (browser sets the multipart boundary)
     expect(init.headers?.['content-type']).toBeUndefined()
   })
+
+  it('postMultipart appends array values as repeated form keys', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ id: 7 }), { status: 201, headers: { 'content-type': 'application/json' } })
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const a = new Blob(['a'])
+    const b = new Blob(['b'])
+    await api.postMultipart('topography/scans/', { assessment: '5', stills: [a, b] })
+    const [, init] = fetchMock.mock.calls[0]
+    const body = init.body as FormData
+    expect(body.getAll('stills')).toHaveLength(2)
+    expect(body.get('assessment')).toBe('5')
+  })
 })
