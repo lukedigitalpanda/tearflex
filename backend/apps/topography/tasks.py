@@ -7,6 +7,7 @@ from apps.analysis.topography.frames import select_best_frame, sharpness
 from apps.analysis.topography.pipeline import analyse_topography_frame
 from apps.analysis.topography.disc import default_cone_profile, CONE_NOMINAL_WORKING_DISTANCE_MM
 from apps.analysis.topography.intrinsics import effective_focal_px
+from apps.analysis.topography.exif import focal_35mm_from_file, focal_px_from_35mm
 from .models import TopographyScan, TopographyResult
 
 logger = logging.getLogger(__name__)
@@ -43,6 +44,15 @@ def process_topography_scan(self, scan_id: int) -> None:
         focal_px = effective_focal_px(
             scan.camera_focal_px, scan.capture_width_px, scan.capture_height_px,
             still_w, still_h)
+        focal_source = 'declared' if focal_px is not None else None
+        if focal_px is None:
+            # No trustworthy declared intrinsic: fall back to the analysed
+            # still's own EXIF (precedence: declared > EXIF > none). The
+            # derived focal is expressed at the still's own dims, so no
+            # rescale reconciliation is needed.
+            f35 = focal_35mm_from_file(best_still.image.path)
+            focal_px = focal_px_from_35mm(f35, still_w, still_h)
+            focal_source = 'exif' if focal_px is not None else None
         if focal_px is not None:
             radii_mm, depths_mm = default_cone_profile()
             out = analyse_topography_frame(
@@ -55,6 +65,12 @@ def process_topography_scan(self, scan_id: int) -> None:
             )
         else:
             out = analyse_topography_frame(best_image)  # uncalibrated placeholder
+
+        if focal_source is not None:
+            # Provenance of the focal the pipeline was given. Deliberately kept
+            # on a backstop downgrade (next to downgrade_reason): it records
+            # what was tried, not what succeeded.
+            out['raw_output']['focal_source'] = focal_source
 
         # Badge the result with what the reconstruction actually did, not the scan's
         # input state — the label must never claim more than the maths delivered.
