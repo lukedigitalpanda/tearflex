@@ -1,6 +1,9 @@
+import io
+
 import cv2
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
+from PIL import ExifTags, Image as PILImage
 from conftest import AssessmentFactory
 from apps.topography.models import TopographyScan, TopographyStill
 from apps.topography.tasks import process_topography_scan
@@ -171,3 +174,87 @@ def test_process_scan_downgrades_implausible_calibrated_result():
     assert scan.result.calibration_state == 'uncalibrated'
     assert scan.calibration_state == 'uncalibrated'
     assert 'implausible' in scan.result.raw_output['downgrade_reason']
+    assert scan.result.raw_output['focal_source'] == 'declared'
+
+
+def _cone_jpg(name, focal_px, f35=None):
+    """A synthetic Placido-cone still as JPEG, optionally carrying an EXIF
+    FocalLengthIn35mmFilm tag (written into the Exif sub-IFD, the tag's real
+    placement) — exercises the EXIF-derived focal path."""
+    radii, depths = default_cone_profile()
+    img, gt = make_cone_ring_image(7.8, CONE_NOMINAL_WORKING_DISTANCE_MM, focal_px,
+                                   radii, depths, size=800)
+    pil = PILImage.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+    buf = io.BytesIO()
+    if f35 is None:
+        pil.save(buf, format='JPEG', quality=95)
+    else:
+        exif = PILImage.Exif()
+        exif[0x8769] = {int(ExifTags.Base.FocalLengthIn35mmFilm): f35}
+        pil.save(buf, format='JPEG', quality=95, exif=exif)
+    return SimpleUploadedFile(name, buf.getvalue(), content_type='image/jpeg'), gt
+
+
+@pytest.mark.django_db
+def test_process_scan_calibrated_from_exif_focal():
+    """No declared focal, but the still's EXIF f35=42 gives f_px ~1098 (0.17%
+    from the true 1100) -> the calibrated path runs with provenance 'exif'."""
+    scan = TopographyScan.objects.create(assessment=AssessmentFactory(), status='uploaded')
+    jpg, gt = _cone_jpg('cone.jpg', 1100.0, f35=42)
+    TopographyStill.objects.create(scan=scan, image=jpg, index=0)
+
+    process_topography_scan(scan.id)
+
+    scan.refresh_from_db()
+    assert scan.status == 'analysed'
+    assert scan.result.calibration_state == 'default'
+    assert scan.calibration_state == 'default'
+    assert scan.result.raw_output['focal_source'] == 'exif'
+    assert abs(scan.result.central_k - gt['expected_power']) < 2.0
+
+
+@pytest.mark.django_db
+def test_process_scan_declared_focal_beats_exif():
+    """Precedence: a reconciled declared focal wins; junk EXIF is ignored."""
+    scan = TopographyScan.objects.create(
+        assessment=AssessmentFactory(), status='uploaded',
+        camera_focal_px=1100.0, capture_width_px=800, capture_height_px=800)
+    jpg, gt = _cone_jpg('cone.jpg', 1100.0, f35=99)  # EXIF would give ~2589 px
+    TopographyStill.objects.create(scan=scan, image=jpg, index=0)
+
+    process_topography_scan(scan.id)
+
+    scan.refresh_from_db()
+    assert scan.result.calibration_state == 'default'
+    assert scan.result.raw_output['focal_source'] == 'declared'
+    assert abs(scan.result.central_k - gt['expected_power']) < 2.0
+
+
+@pytest.mark.django_db
+def test_process_scan_exif_focal_downgraded_by_backstop():
+    """EXIF f35=84 (~2x the truth) reconstructs implausibly -> the backstop
+    downgrades; provenance still records that an EXIF focal was tried."""
+    scan = TopographyScan.objects.create(assessment=AssessmentFactory(), status='uploaded')
+    jpg, _ = _cone_jpg('cone.jpg', 1100.0, f35=84)
+    TopographyStill.objects.create(scan=scan, image=jpg, index=0)
+
+    process_topography_scan(scan.id)
+
+    scan.refresh_from_db()
+    assert scan.status == 'analysed'
+    assert scan.result.calibration_state == 'uncalibrated'
+    assert scan.result.raw_output['focal_source'] == 'exif'
+    assert 'implausible' in scan.result.raw_output['downgrade_reason']
+
+
+@pytest.mark.django_db
+def test_process_scan_no_declared_no_exif_stays_uncalibrated():
+    scan = TopographyScan.objects.create(assessment=AssessmentFactory(), status='uploaded')
+    jpg, _ = _cone_jpg('cone.jpg', 1100.0)  # no EXIF written
+    TopographyStill.objects.create(scan=scan, image=jpg, index=0)
+
+    process_topography_scan(scan.id)
+
+    scan.refresh_from_db()
+    assert scan.result.calibration_state == 'uncalibrated'
+    assert 'focal_source' not in scan.result.raw_output
