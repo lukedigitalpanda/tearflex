@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 const MAX_IMAGES = 20 // mirrors backend MAX_STILLS_PER_SCAN
 
@@ -11,10 +11,14 @@ export function TopographyImagePicker({
   onChange: (files: File[]) => void
 }) {
   const [error, setError] = useState<string | null>(null)
+  const [previews, setPreviews] = useState<{ file: File; url: string }[]>([])
   const urlsRef = useRef(new Map<File, string>())
-  const previews = useMemo(() => {
+
+  // Creation AND revocation both live in effects so a StrictMode
+  // setup→cleanup→setup cycle re-creates what its cleanup destroyed.
+  useEffect(() => {
     const urls = urlsRef.current
-    return files.map((file) => {
+    const next = files.map((file) => {
       let url = urls.get(file)
       if (!url) {
         url = URL.createObjectURL(file)
@@ -22,10 +26,6 @@ export function TopographyImagePicker({
       }
       return { file, url }
     })
-  }, [files])
-  // Revoke URLs for files that were removed; revoke everything on unmount.
-  useEffect(() => {
-    const urls = urlsRef.current
     const stale: File[] = []
     urls.forEach((url, file) => {
       if (!files.includes(file)) {
@@ -34,11 +34,14 @@ export function TopographyImagePicker({
       }
     })
     stale.forEach((file) => urls.delete(file))
+    setPreviews(next)
   }, [files])
+
   useEffect(() => {
     const urls = urlsRef.current
     return () => {
       urls.forEach((url) => URL.revokeObjectURL(url))
+      urls.clear() // a StrictMode remount starts from an empty cache
     }
   }, [])
 

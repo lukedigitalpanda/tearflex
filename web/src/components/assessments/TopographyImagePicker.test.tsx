@@ -1,3 +1,4 @@
+import { StrictMode } from 'react'
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -72,5 +73,18 @@ describe('TopographyImagePicker', () => {
     expect(await screen.findByText(/at most 20 images/i)).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /remove e0\.jpg/i }))
     expect(screen.queryByText(/at most 20 images/i)).not.toBeInTheDocument()
+  })
+
+  it('survives a StrictMode double-mount with retained files (dev remount safety)', () => {
+    const a = img('a.jpg')
+    render(
+      <StrictMode>
+        <TopographyImagePicker files={[a]} onChange={vi.fn()} />
+      </StrictMode>,
+    )
+    const src = screen.getByAltText('a.jpg').getAttribute('src')
+    const revoked = (URL.revokeObjectURL as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0])
+    // the rendered thumbnail must not point at a URL the component revoked
+    expect(revoked).not.toContain(src)
   })
 })
