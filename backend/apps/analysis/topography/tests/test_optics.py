@@ -1,6 +1,7 @@
 import math
 import pytest
 from apps.analysis.topography import optics
+from apps.analysis.topography.optics import ImplausibleReconstruction
 
 
 def test_forward_known_value():
@@ -42,4 +43,17 @@ def test_nonpositive_inputs_raise():
     with pytest.raises(ValueError):
         optics.ring_radius_px(0.0, 40.0, 3000.0, 5.0)
     with pytest.raises(ValueError):
+        optics.radius_to_power(0.0)
+
+
+def test_corneal_radius_non_physical_raises_implausible():
+    """Positive but mutually-inconsistent inputs (ring too large for the claimed
+    focal/geometry) are a measurement failure, not a caller bug — they must raise
+    the downgradeable exception type, not plain ValueError."""
+    with pytest.raises(ImplausibleReconstruction, match="non-physical"):
+        optics.corneal_radius_mm(100.0, 40.0, 200.0, 3.0)  # denom = 600 - 8000 < 0
+
+
+def test_radius_to_power_non_positive_raises_implausible():
+    with pytest.raises(ImplausibleReconstruction, match="positive"):
         optics.radius_to_power(0.0)

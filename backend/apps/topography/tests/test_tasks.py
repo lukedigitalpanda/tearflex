@@ -258,3 +258,40 @@ def test_process_scan_no_declared_no_exif_stays_uncalibrated():
     scan.refresh_from_db()
     assert scan.result.calibration_state == 'uncalibrated'
     assert 'focal_source' not in scan.result.raw_output
+
+
+@pytest.mark.django_db
+def test_process_scan_ultrawide_exif_downgrades_not_fails():
+    """f35=13 is a REAL ultra-wide tag; at this geometry it inverts non-physically.
+    Before the optics hardening this failed the scan and burned retries; it must
+    downgrade like any other implausible focal."""
+    scan = TopographyScan.objects.create(assessment=AssessmentFactory(), status='uploaded')
+    jpg, _ = _cone_jpg('cone.jpg', 1100.0, f35=13)
+    TopographyStill.objects.create(scan=scan, image=jpg, index=0)
+
+    process_topography_scan(scan.id)
+
+    scan.refresh_from_db()
+    assert scan.status == 'analysed'
+    assert scan.result.calibration_state == 'uncalibrated'
+    assert scan.result.raw_output['focal_source'] == 'exif'
+    assert 'non-physical' in scan.result.raw_output['downgrade_reason']
+
+
+@pytest.mark.django_db
+def test_process_scan_crop_detected_skips_exif_fallback():
+    """An aspect mismatch between declared capture dims and the analysed still is
+    a positively-detected crop, which invalidates the still's own f35 (it
+    describes the uncropped capture's field of view). The EXIF fallback must not
+    run; the scan stays honestly uncalibrated."""
+    scan = TopographyScan.objects.create(
+        assessment=AssessmentFactory(), status='uploaded',
+        camera_focal_px=1100.0, capture_width_px=1600, capture_height_px=1200)
+    jpg, _ = _cone_jpg('cone.jpg', 1100.0, f35=42)  # would calibrate if trusted
+    TopographyStill.objects.create(scan=scan, image=jpg, index=0)
+
+    process_topography_scan(scan.id)
+
+    scan.refresh_from_db()
+    assert scan.result.calibration_state == 'uncalibrated'
+    assert 'focal_source' not in scan.result.raw_output

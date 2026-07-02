@@ -17,6 +17,18 @@ KERATOMETRIC_INDEX = 1.3375
 _POWER_NUMERATOR = (KERATOMETRIC_INDEX - 1.0) * 1000.0  # 337.5 D*mm
 
 
+class ImplausibleReconstruction(ValueError):
+    """The reconstruction produced (or implies) a physically-impossible cornea.
+
+    Measurement failure — wrong intrinsics, bad extraction — not a caller bug:
+    the caller should refuse the calibrated badge (downgrade), never publish
+    the number or fail the scan. Raised here when individually-valid inputs
+    are mutually non-physical, and by the reconstruction-level plausibility
+    gate (reconstruct._gate_plausibility; the reconstruct module re-exports
+    this class).
+    """
+
+
 def _resolve_object_distance(distance_mm: float, object_distance_mm: float | None) -> float:
     return distance_mm if object_distance_mm is None else object_distance_mm
 
@@ -37,11 +49,11 @@ def corneal_radius_mm(ring_px: float, distance_mm: float, focal_px: float,
         raise ValueError("all optical inputs must be positive")
     denom = focal_px * object_radius_mm - ring_px * (distance_mm + d0)
     if denom <= 0:
-        raise ValueError("non-physical ring radius for this geometry (denominator <= 0)")
+        raise ImplausibleReconstruction("non-physical ring radius for this geometry (denominator <= 0)")
     return 2 * ring_px * d0 * distance_mm / denom
 
 
 def radius_to_power(corneal_radius_mm: float) -> float:
     if corneal_radius_mm <= 0:
-        raise ValueError("corneal radius must be positive")
+        raise ImplausibleReconstruction("corneal radius must be positive")
     return _POWER_NUMERATOR / corneal_radius_mm

@@ -6,7 +6,7 @@ from django.core.files.base import ContentFile
 from apps.analysis.topography.frames import select_best_frame, sharpness
 from apps.analysis.topography.pipeline import analyse_topography_frame
 from apps.analysis.topography.disc import default_cone_profile, CONE_NOMINAL_WORKING_DISTANCE_MM
-from apps.analysis.topography.intrinsics import effective_focal_px
+from apps.analysis.topography.intrinsics import aspect_mismatch, effective_focal_px
 from apps.analysis.topography.exif import focal_35mm_from_file, focal_px_from_35mm
 from .models import TopographyScan, TopographyResult
 
@@ -45,11 +45,14 @@ def process_topography_scan(self, scan_id: int) -> None:
             scan.camera_focal_px, scan.capture_width_px, scan.capture_height_px,
             still_w, still_h)
         focal_source = 'declared' if focal_px is not None else None
-        if focal_px is None:
+        if focal_px is None and not aspect_mismatch(
+                scan.capture_width_px, scan.capture_height_px, still_w, still_h):
             # No trustworthy declared intrinsic: fall back to the analysed
             # still's own EXIF (precedence: declared > EXIF > none). The
             # derived focal is expressed at the still's own dims, so no
             # rescale reconciliation is needed.
+            # A positively-detected crop (aspect mismatch) invalidates the
+            # still's f35, so the EXIF fallback is skipped.
             f35 = focal_35mm_from_file(best_still.image.path)
             focal_px = focal_px_from_35mm(f35, still_w, still_h)
             focal_source = 'exif' if focal_px is not None else None

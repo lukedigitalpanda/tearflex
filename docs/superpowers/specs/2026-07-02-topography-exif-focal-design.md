@@ -38,8 +38,9 @@ every future upload path (web 2b, mobile-library 2c) calibrated-capable on day o
    gross errors.
 4. **Correct under downscale, wrong under crop.** f35 encodes field of view, so
    `f_px` derived at the current dims survives uniform resizing with EXIF intact. A
-   crop changes FoV undetectably — accepted residual risk, same class as the existing
-   within-tolerance-wrong-declared-focal gap; the backstop bounds it.
+   crop changes FoV undetectably — detected crops skip the fallback (see the
+   optics-downgrade hardening spec); undetectable crops remain a residual risk
+   downgraded by the plausibility machinery.
 5. **Provenance recorded.** `raw_output['focal_source'] = 'declared' | 'exif'` whenever
    a focal was supplied to the pipeline (absent when uncalibrated from the start). It
    records what was *tried*: on a backstop downgrade the key remains alongside
@@ -56,7 +57,7 @@ def focal_35mm_from_file(path) -> float | None:
     # PIL Image.getexif(); read FocalLengthIn35mmFilm (tag 41989) from the Exif
     # sub-IFD first (ExifTags.IFD.Exif), then fall back to the top-level IFD
     # (lenient — some writers misplace it). Returns None on: unreadable file,
-    # missing tag, non-numeric, or value <= 0. Never raises.
+    # missing tag, non-numeric, non-finite, or outside the PROVISIONAL usability band. Never raises.
 
 def focal_px_from_35mm(f35, width_px, height_px) -> float | None:
     # sqrt(w^2 + h^2) * f35 / FULL_FRAME_DIAGONAL_MM.

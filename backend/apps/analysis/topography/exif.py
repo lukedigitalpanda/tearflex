@@ -4,7 +4,9 @@ When a scan carries no mobile-declared intrinsic, the analysed still's own
 EXIF FocalLengthIn35mmFilm tag gives a screening-grade pixel focal length:
 35mm equivalence encodes field of view, so the pixel focal follows from the
 image diagonal. Correct under uniform downscaling with EXIF intact; wrong
-under crop (accepted residual risk, bounded by the plausibility backstop).
+under crop — detected crops (declared-dims aspect mismatch) skip this fallback
+entirely, and undetectable ones are downgraded by the plausibility machinery
+(gate + optics guards).
 The tag is an integer, so OEM rounding sets a ~1-2% accuracy floor.
 """
 import math
