@@ -74,3 +74,14 @@ def test_pipeline_plausible_calibrated_frame_has_no_downgrade_reason():
                                    ring_object_radii_mm=obj)
     assert out['raw_output']['calibration_state'] == 'default'
     assert 'downgrade_reason' not in out['raw_output']
+
+
+def test_pipeline_downgrades_non_physical_focal():
+    """Optics-level wrong-intrinsics failures (not just gate-range ones) must
+    downgrade — previously they escaped as plain ValueError and failed the scan."""
+    obj = [3.0, 6.0, 9.0, 12.0, 15.0, 18.0]
+    img, _ = make_physical_ring_image(7.8, 40.0, 5000.0, obj)
+    out = analyse_topography_frame(img, distance_mm=40.0, focal_px=500.0,
+                                   ring_object_radii_mm=obj)
+    assert out['raw_output']['calibration_state'] == 'uncalibrated'
+    assert 'non-physical' in out['raw_output']['downgrade_reason']

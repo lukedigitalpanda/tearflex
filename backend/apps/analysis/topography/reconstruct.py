@@ -2,6 +2,10 @@
 import numpy as np
 from . import optics
 
+# Re-export: the exception is defined in optics (the lowest layer, so optics
+# itself can raise it); every existing import site keeps working unchanged.
+from .optics import ImplausibleReconstruction
+
 KERATOMETRIC_INDEX = optics.KERATOMETRIC_INDEX
 # Placeholder pixel-radius -> dioptre scale used only when no distance/geometry is
 # supplied (calibration_state='uncalibrated'). NOT metrically valid.
@@ -33,14 +37,6 @@ def _robust_radius(estimates) -> float:
     # At least half the values sit within one raw MAD of the median, so `keep`
     # is never empty.
     return float(values[keep].mean())
-
-
-class ImplausibleReconstruction(ValueError):
-    """The reconstruction produced a physically-impossible cornea.
-
-    This means measurement failure (bad extraction, wrong intrinsics) — the
-    caller should refuse the calibrated badge, not publish the number.
-    """
 
 
 # PROVISIONAL physiological measurement-sanity bounds (unconfirmed as of

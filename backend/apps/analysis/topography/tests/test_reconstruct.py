@@ -257,3 +257,14 @@ def test_uncalibrated_path_is_not_gated():
              'radii': np.full((180, 4), 30.0), 'n_rings': 4}
     out = reconstruct_curvature(rings)
     assert out['calibration_state'] == 'uncalibrated'
+
+
+def test_catadioptric_non_physical_focal_raises_implausible():
+    """A focal far too small for the observed ring radii makes the optics
+    inversion non-physical (denominator <= 0); this must surface as
+    ImplausibleReconstruction so the pipeline downgrades instead of failing."""
+    obj = [3.0, 6.0, 9.0, 12.0]
+    rings = _rings_for(lambda a: 7.8, obj, 40.0, 3000.0)
+    with pytest.raises(ImplausibleReconstruction, match="non-physical"):
+        reconstruct_curvature(rings, distance_mm=40.0, focal_px=200.0,
+                              ring_object_radii_mm=obj)
