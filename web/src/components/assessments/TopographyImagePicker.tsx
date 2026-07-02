@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 const MAX_IMAGES = 20 // mirrors backend MAX_STILLS_PER_SCAN
 
@@ -11,16 +11,36 @@ export function TopographyImagePicker({
   onChange: (files: File[]) => void
 }) {
   const [error, setError] = useState<string | null>(null)
-  const previews = useMemo(
-    () => files.map((file) => ({ file, url: URL.createObjectURL(file) })),
-    [files],
-  )
-  useEffect(
-    () => () => {
-      previews.forEach((p) => URL.revokeObjectURL(p.url))
-    },
-    [previews],
-  )
+  const urlsRef = useRef(new Map<File, string>())
+  const previews = useMemo(() => {
+    const urls = urlsRef.current
+    return files.map((file) => {
+      let url = urls.get(file)
+      if (!url) {
+        url = URL.createObjectURL(file)
+        urls.set(file, url)
+      }
+      return { file, url }
+    })
+  }, [files])
+  // Revoke URLs for files that were removed; revoke everything on unmount.
+  useEffect(() => {
+    const urls = urlsRef.current
+    const stale: File[] = []
+    urls.forEach((url, file) => {
+      if (!files.includes(file)) {
+        URL.revokeObjectURL(url)
+        stale.push(file)
+      }
+    })
+    stale.forEach((file) => urls.delete(file))
+  }, [files])
+  useEffect(() => {
+    const urls = urlsRef.current
+    return () => {
+      urls.forEach((url) => URL.revokeObjectURL(url))
+    }
+  }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const picked = Array.from(e.target.files ?? [])
@@ -39,7 +59,10 @@ export function TopographyImagePicker({
     onChange(next)
   }
 
-  const removeAt = (index: number) => onChange(files.filter((_, i) => i !== index))
+  const removeAt = (index: number) => {
+    setError(null)
+    onChange(files.filter((_, i) => i !== index))
+  }
 
   return (
     <div className="space-y-3">
