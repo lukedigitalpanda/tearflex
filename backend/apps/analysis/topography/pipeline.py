@@ -25,6 +25,11 @@ def analyse_topography_frame(bgr: np.ndarray, *, distance_mm=None, focal_px=None
     is used per frame. ring_object_depths_mm (same order) are the rings' axial depths on
     the Placido cone — each ring's object distance is distance_mm minus its depth, which
     is what makes the reconstruction cone-aware rather than flat-disc.
+
+    If the calibrated reconstruction is physically implausible (the sanity gate raises
+    ImplausibleReconstruction), the frame is downgraded rather than failed: the
+    uncalibrated placeholder path is re-run, raw_output['downgrade_reason'] records why,
+    and no exception escapes to the caller.
     """
     gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
     center = find_reflection_center(gray)
